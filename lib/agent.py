@@ -12,6 +12,8 @@ from langchain.prompts import PromptTemplate
 import dotenv
 from lib.memory import Memory
 from langchain_community.llms import Ollama
+from faker import Faker
+import random
 
 dotenv.load_dotenv(".env")
 
@@ -30,7 +32,7 @@ class Agent:
         self.status = f"Name: {name}, Age: {age}, Job: {job}, Hobby: {hobby}, Personality: {personality}"
         self.opinion = 0
 
-        self.llm = Ollama(model=model, num_predict=100)
+        self.llm = Ollama(model=model, num_predict=1)
         self.sentiment_llm = Ollama(model="mistral:instruct", num_predict=2)
         self.memory = Memory(model=model)
 
@@ -54,7 +56,7 @@ class Agent:
             + "\nThe following is {agent_name}'s status: {agent_status}"
             + "\nThe following are {agent_name}'s relevant memories: {relevant_memories}"
             + "\n{correspondee} said: {question}"
-            + "\n{agent_name}'s response:"
+            + "\n{agent_name}:"
         )
 
         relevant_memories_str = "\n".join(self.memory.get_relevant_memories(question))
@@ -165,4 +167,17 @@ def communicate(caller: Agent, callee: Agent, topic: str, firstInteraction: bool
 
     return conversation
 
+def fake_hobby():
+    hobbies = ["Reading", "Hiking", "Painting", "Cooking", "Gaming", "Traveling", "Photography", "Gardening", "Yoga", "Dancing"]
+    return random.choice(hobbies)
 
+def fake_name():
+    fake = Faker()
+    return fake.name()
+
+def fake_job():
+    fake = Faker()
+    return fake.job()
+
+def fake_age():
+    return random.randint(18, 65)
