@@ -46,8 +46,11 @@ if __name__ == "__main__":
     for G in fully_connected_networks:
         G.remove_edges_from(nx.selfloop_edges(G))
 
+    fully_disconnected_networks = [nx.empty_graph(n) for n in nodes_list]
+
     # Save all the networks
     save_networks(scale_free_networks, "scale_free_network", "Scale-free Network")
     save_networks(watts_strogatz_networks, "watts_strogatz_network", "Watts-Strogatz Network")
     save_networks(random_networks, "random_network", "Random Network")
     save_networks(fully_connected_networks, "fully_connected_network", "Fully Connected Network")
+    save_networks(fully_disconnected_networks, "fully_disconnected_network", "Fully Disconnected Network")
