@@ -52,7 +52,8 @@ def test_mmlu():
             correct_response = row["target"]
 
             agent_input = f"{question}\nA: {option_a}\nB: {option_b}\nC: {option_c}\nD: {option_d}\nRespond with only A, B, C, or D. Do not reply with Based, you must only say A, B, C, or D."
-            # load new agents
+
+            # load new agents so that agents memory is not carried over
             graph, agents = load_agents(num_agents)
 
             responses_list = []
