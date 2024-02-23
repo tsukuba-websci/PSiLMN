@@ -32,7 +32,6 @@ def test_agent_interview():
     bob_response = bob.interview('What have you been up to recently?')
     
     # Test the interview responses
-    # This assumes that interview method returns a string with the interview answer
     assert isinstance(alice_response, str)
     assert isinstance(bob_response, str)
 
@@ -56,5 +55,4 @@ def test_communication():
     conversation_result = communicate(caller=alice, callee=bob, firstInteraction=True, topic="Homework")
     
     # Test the result of the communication
-    # This assumes that 'communicate' returns some form of result that you can test
     assert conversation_result is not None
