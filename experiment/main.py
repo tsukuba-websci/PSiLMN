@@ -31,13 +31,13 @@ def test_mmlu():
     csv_file_path = Path("results/results_mmlu.csv")
 
     # todo: undo the limit of questions
-    dataset = dataset.head(1)
+    dataset = dataset.head(200)
     num_questions = len(dataset)
 
     for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network"]:
         logging.info(f"Running test for {network_type} network.")
 
-        for num_agents in [10]: # todo: for 10, 100, 1000
+        for num_agents in [10,100]: # todo: for 10, 100, 1000
             logging.info(f"Running test for {num_agents} agents.")
 
             correct_responses = []
@@ -59,9 +59,7 @@ def test_mmlu():
                 # load new agents so that agents memory is not carried over
                 graph, agents = load_agents(network_type, num_agents)
 
-                responses_list = []
-
-                rounds = 2
+                rounds = 3
                 logging.info(f"Running test for {rounds} rounds of communication.")
 
                 for round in tqdm(range(rounds), desc="Rounds of Communication"):
