@@ -4,7 +4,7 @@ from pathlib import Path
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
-from lib.agent import Agent, fake_name, fake_age, fake_job, fake_hobby
+from lib.agent import Agent, fake_name, parse_response_mmlu
 import networkx as nx
 from datasets import load_dataset
 from typing import Dict, Tuple
@@ -20,25 +20,25 @@ logging.basicConfig(filename='logs/logfile.log', filemode='w', level=logging.INF
 
 def test_mmlu():
     """
-    Test the multi-agent response to the MMUL dataset.
+    Test the multi-agent response to the MMLU dataset.
     """
 
     logging.info("MMLU dataset loading")
-    dataset = load_dataset("lukaemon/mmlu", "sociology", split="test").to_pandas()
+    dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", split="test").to_pandas()
     logging.info("MMLU dataset loaded")
 
     Path("results").mkdir(parents=True, exist_ok=True)
     csv_file_path = Path("results/results_mmlu.csv")
 
     # todo: undo the limit of questions
-    dataset = dataset.head(200)
+    dataset = dataset.head(1)
     num_questions = len(dataset)
 
-    for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
+    for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network"]:
         logging.info(f"Running test for {network_type} network.")
 
-        for num_agents in [10, 100]: # todo: for 10, 100, 1000
-            logging.info("Running test for {num_agents} agents.")
+        for num_agents in [10]: # todo: for 10, 100, 1000
+            logging.info(f"Running test for {num_agents} agents.")
 
             correct_responses = []
 
@@ -54,14 +54,14 @@ def test_mmlu():
                 option_d = row["D"]
                 correct_response = row["target"]
 
-                agent_input = f"{question}\nA: {option_a}\nB: {option_b}\nC: {option_c}\nD: {option_d}\nRespond with only A, B, C, or D. Do not reply with Based, you must only say A, B, C, or D."
+                agent_input = f"Can you answer the following question as accurately as possible? {question}\nA) {option_a}\nB) {option_b}\nC) {option_c}\nD) {option_d}\nExplain your answer, putting the answer in the form (X) at the end of your response"
 
                 # load new agents so that agents memory is not carried over
                 graph, agents = load_agents(network_type, num_agents)
 
                 responses_list = []
 
-                rounds = 3
+                rounds = 2
                 logging.info(f"Running test for {rounds} rounds of communication.")
 
                 for round in tqdm(range(rounds), desc="Rounds of Communication"):
@@ -74,9 +74,10 @@ def test_mmlu():
                         agent.response = get_response(agent=agent, input=agent_input)
                         logging.info(f"Agent {agent.id} response: {agent.response}")
 
-                    responses_list = [agent.response for agent in agents.values()]
-                    responses_counter = Counter(responses_list)
-                    most_common_response, _ = responses_counter.most_common(1)[0]
+                    parsed_responses = [parse_response_mmlu(agent.response) for agent in agents.values()]
+                    logging.info(f"Parsed responses: {parsed_responses}")
+                    response_counter = Counter(parsed_responses)
+                    most_common_response, _ = response_counter.most_common(1)[0]
                     logging.info(f"Most common response: {most_common_response}")
 
                     # get the neighbor responses
@@ -117,13 +118,13 @@ def load_agents(network_type: str, n: int) -> Tuple[nx.Graph, Dict[int, Agent]]:
     n (int): The number of nodes in the network. Should be one of 10, 100, or 1000.
     """
 
-    if n not in [10, 100, 1000] or network_type not in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network"]:
-        raise ValueError("Invalid network size or type. Please use one of 10, 100, 1000 for the network size and one of scale_free_network, watts_strogatz_network, random_network, fully_connected_network for the network type.")
+    if n not in [10, 100, 1000] or network_type not in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
+        raise ValueError("Invalid network size or type. Please use one of 10, 100, 1000 for the network size and one of scale_free_network, watts_strogatz_network, random_network, fully_connected_network, fully_disconnected_network for the network type.")
     else:
         graph =  nx.read_graphml(f"data/{network_type}/{n}.graphml")
         agents_dict = {}
         for id in graph.nodes:
-            agents_dict[id] = Agent(id=id, name=fake_name(), age=fake_age(), job=fake_job(), hobby=fake_hobby())
+            agents_dict[id] = Agent(id=id, name=fake_name())
 
         return graph, agents_dict
 
@@ -132,22 +133,15 @@ def get_response(agent: Agent, input: str) -> str:
     Get the agents response to a question.
 
     Args:
-    agent (Agent): The agent to get a response from.
+        agent (Agent): The agent to get a response from.
     """
 
-    valid_responses = ["A", "B", "C", "D"]
-
     if agent.neighbor_resonse:
-        input = f"{agent.neighbor_resonse}\n{input}"
+        input = f"{input}\nUsing the solutions from other agents as additional information, give an updated response. The following are the responses of the other agents:\n{agent.neighbor_resonse}"
 
     logging.info(f"Agent input: {input}")
 
-    response = agent.interview(input).strip().upper()
-
-    try_counter = 0
-    while response not in valid_responses and try_counter < 3:
-        response = agent.interview(input)
-        try_counter += 1
+    response = agent.interview(input)
     
     return response
 

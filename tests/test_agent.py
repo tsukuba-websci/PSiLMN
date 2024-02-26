@@ -52,7 +52,7 @@ def test_communication():
     bob = Agent(id=1, name="Bob", age=35, hobby="Hiking", job="Teacher")
     
     # Test communication between Alice and Bob
-    conversation_result = communicate(caller=alice, callee=bob, firstInteraction=True, topic="Homework")
+    conversation_result = communicate(caller=alice, callee=bob, question="What is the capital of France?")
     
     # Test the result of the communication
     assert conversation_result is not None
