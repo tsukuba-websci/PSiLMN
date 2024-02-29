@@ -13,6 +13,7 @@ import logging
 from tqdm import tqdm
 import csv
 import argparse
+import time
 
 # Configure logging
 Path("logs").mkdir(parents=True, exist_ok=True)
@@ -32,7 +33,7 @@ def test_mmlu(model: str = "mistral"):
     csv_file_path = Path("results/results_mmlu.csv")
 
     # todo: undo the limit of questions
-    dataset = dataset.head(3)
+    dataset = dataset.head(10)
     num_questions = len(dataset)
 
     for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network"]:
@@ -55,7 +56,7 @@ def test_mmlu(model: str = "mistral"):
                 option_d = row["D"]
                 correct_response = row["target"]
 
-                agent_input = f"Can you answer the following question as accurately as possible? {question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nExplain your answer, putting the answer in the form (X) with brackets, at the end of your response."
+                agent_input = f"Can you answer the following question as accurately as possible? {question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nExplain your answer, putting the answer in the form (A), (B), (C) or (D) with round brackets, at the end of your response."
 
                 # load new agents so that agents memory is not carried over
                 graph, agents = load_agents(network_type, num_agents, model=model)
@@ -106,8 +107,8 @@ def test_mmlu(model: str = "mistral"):
                 writer = csv.writer(file)
                 # Check if the file is empty to write headers
                 if file.tell() == 0:
-                    writer.writerow(['network_type','network_size', 'rounds', 'fraction_correct'])
-                writer.writerow([network_type, num_agents, rounds, frac_correct])
+                    writer.writerow(['model','network_type','network_size', 'rounds', 'fraction_correct'])
+                writer.writerow([model, network_type, num_agents, rounds, frac_correct])
 
 def load_agents(network_type: str, n: int, model: str) -> Tuple[nx.Graph, Dict[int, Agent]]:
     """
@@ -154,7 +155,30 @@ if __name__ == "__main__":
     model = args.model
 
     logging.info("Starting test_mmlu with model: {model}")
+
+    model = "gpt-3.5-turbo"
+    start_time = time.time()
     test_mmlu(model=model)
+    end_time = time.time()
+    total_time = end_time - start_time
+    with open('runtime_log.txt', 'a') as log_file:
+        log_file.write(f"Total runtime of the script: {total_time} seconds\n")
+
+    model = "mistral"
+    start_time = time.time()
+    test_mmlu(model=model)
+    end_time = time.time()
+    total_time = end_time - start_time
+    with open('runtime_log.txt', 'a') as log_file:
+        log_file.write(f"Total runtime using {model}: {total_time} seconds\n")
+
+    model = "phi"
+    start_time = time.time()
+    test_mmlu(model=model)
+    end_time = time.time()
+    total_time = end_time - start_time
+    with open('runtime_log.txt', 'a') as log_file:
+        log_file.write(f"Total runtime using {model}: {total_time} seconds\n")
 
     pass
 
