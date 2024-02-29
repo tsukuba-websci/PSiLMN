@@ -12,13 +12,14 @@ from collections import Counter
 import logging
 from tqdm import tqdm
 import csv
+import argparse
 
 # Configure logging
 Path("logs").mkdir(parents=True, exist_ok=True)
 logging.basicConfig(filename='logs/logfile.log', filemode='w', level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
-def test_mmlu():
+def test_mmlu(model: str = "mistral"):
     """
     Test the multi-agent response to the MMLU dataset.
     """
@@ -57,7 +58,7 @@ def test_mmlu():
                 agent_input = f"Can you answer the following question as accurately as possible? {question}\nA) {option_a}\nB) {option_b}\nC) {option_c}\nD) {option_d}\nExplain your answer, putting the answer in the form (X) at the end of your response"
 
                 # load new agents so that agents memory is not carried over
-                graph, agents = load_agents(network_type, num_agents)
+                graph, agents = load_agents(network_type, num_agents, model=model)
 
                 rounds = 2
                 logging.info(f"Running test for {rounds} rounds of communication.")
@@ -108,7 +109,7 @@ def test_mmlu():
                     writer.writerow(['network_type','network_size', 'rounds', 'fraction_correct'])
                 writer.writerow([network_type, num_agents, rounds, frac_correct])
 
-def load_agents(network_type: str, n: int) -> Tuple[nx.Graph, Dict[int, Agent]]:
+def load_agents(network_type: str, n: int, model: str) -> Tuple[nx.Graph, Dict[int, Agent]]:
     """
     Generate a scale free network of n nodes, where each node is an agent.
     
@@ -122,7 +123,7 @@ def load_agents(network_type: str, n: int) -> Tuple[nx.Graph, Dict[int, Agent]]:
         graph =  nx.read_graphml(f"data/{network_type}/{n}.graphml")
         agents_dict = {}
         for id in graph.nodes:
-            agents_dict[id] = Agent(id=id, name=fake_name(), model="gpt-3.5-turbo")
+            agents_dict[id] = Agent(id=id, name=fake_name(), model=model)
 
         return graph, agents_dict
 
@@ -145,8 +146,15 @@ def get_response(agent: Agent, input: str) -> str:
 
 if __name__ == "__main__":
 
-    logging.info("Starting test_mmlu")
-    test_mmlu()
+    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser.add_argument("model", type=str, choices=['mistral', 'phi', 'gpt-3.5-turbo'], help="The model to run the experiment with.")
+
+    args = parser.parse_args()
+
+    model = args.model
+
+    logging.info("Starting test_mmlu with model: {model}")
+    test_mmlu(model=model)
 
     pass
 
