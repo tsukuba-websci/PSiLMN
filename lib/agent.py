@@ -5,6 +5,8 @@ from langchain.prompts import PromptTemplate
 import dotenv
 from lib.memory import Memory
 from langchain_community.llms import Ollama
+from langchain_openai import ChatOpenAI
+from langchain.schema.language_model import BaseLanguageModel
 from faker import Faker
 import random
 
@@ -13,18 +15,25 @@ dotenv.load_dotenv(".env")
 class Agent:
     """Generative Agent"""
 
-    def __init__(self, id: str, name: str, age: int = 40, hobby: str = "Not Applicable", job: str = "Not Applicable", personality: str = "Not Applicable", model: str = "mistral:instruct") -> None:
+    def __init__(self, id: str, name: str, personality: str = "Not Applicable", model: str = "mistral") -> None:
+
+        if "mistral" in model:
+            llm = Ollama(model="mistral:instruct")
+        elif model == "phi":
+            llm = Ollama(model="phi")
+        elif "gpt-3.5-turbo" in model:
+            llm = ChatOpenAI()
+        else:
+            raise ValueError(f"Unknown model: {model}")
+
         self.id = id
         self.name = name
-        self.age = age
-        self.job = job
-        self.hobby = hobby
         self.personality = personality
         self.verbose = False
-        self.status = f"Name: {name}, Age: {age}, Job: {job}, Hobby: {hobby}, Personality: {personality}"
+        self.status = f"Name: {name}, Personality: {personality}"
         self.response = ""
         self.neighbor_resonse = ""
-        self.llm = Ollama(model=model)
+        self.llm = llm
         self.memory = Memory(model=model)
 
     @staticmethod
@@ -140,12 +149,7 @@ def parse_response_mmlu(response: str) -> Optional[str]:
     Parse the response for MMLU questions
     """
 
-    # first, try to parse for the answer
     answer = parse_answer(response)
-    
-    # if not answer:
-    #     # if no answer was found, try to parse for the solution
-    #     answer = solve_math_problems(response)
 
     return answer
 

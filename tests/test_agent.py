@@ -1,31 +1,25 @@
+import pytest
 import sys
 from pathlib import Path
 
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
-import pytest
 from lib.agent import Agent, communicate
 
 def test_agent_initialization():
     # Test the initialization of Agent Alice
-    alice = Agent(id=0, name="Alice", age=21, hobby="Reading", job="Student")
+    alice = Agent(id=0, name="Alice")
     assert alice.name == "Alice"
-    assert alice.age == 21
-    assert alice.hobby == "Reading"
-    assert alice.job == "Student"
     
     # Test the initialization of Agent Bob
-    bob = Agent(id=1, name="Bob", age=35, hobby="Hiking", job="Teacher")
+    bob = Agent(id=1, name="Bob")
     assert bob.name == "Bob"
-    assert bob.age == 35
-    assert bob.hobby == "Hiking"
-    assert bob.job == "Teacher"
 
 def test_agent_interview():
     # Create agents
-    alice = Agent(id=0, name="Alice", age=21, hobby="Reading", job="Student")
-    bob = Agent(id=1, name="Bob", age=35, hobby="Hiking", job="Teacher")
+    alice = Agent(id=0, name="Alice")
+    bob = Agent(id=1, name="Bob")
     
     # Mock interview responses
     alice_response = alice.interview('What have you been up to recently?')
@@ -36,8 +30,8 @@ def test_agent_interview():
     assert isinstance(bob_response, str)
 
 def test_memory_addition():
-    alice = Agent(id=0, name="Alice", age=21, hobby="Reading", job="Student")
-    bob = Agent(id=1, name="Bob", age=35, hobby="Hiking", job="Teacher")
+    alice = Agent(id=0, name="Alice")
+    bob = Agent(id=1, name="Bob")
     
     # Test adding memory to Alice
     alice.memory.add_memory(memory_content="I am struggling with the homework.")
@@ -48,8 +42,8 @@ def test_memory_addition():
     assert "I am great at giving advice." in [memory.page_content for memory in bob.memory.memory_stream]
 
 def test_communication():
-    alice = Agent(id=0, name="Alice", age=21, hobby="Reading", job="Student")
-    bob = Agent(id=1, name="Bob", age=35, hobby="Hiking", job="Teacher")
+    alice = Agent(id=0, name="Alice")
+    bob = Agent(id=1, name="Bob")
     
     # Test communication between Alice and Bob
     conversation_result = communicate(caller=alice, callee=bob, question="What is the capital of France?")
