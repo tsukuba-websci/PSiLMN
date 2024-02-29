@@ -12,9 +12,9 @@ from langchain_community.docstore import InMemoryDocstore
 import dotenv
 from langchain_community.llms import Ollama
 from langchain_community.embeddings import OllamaEmbeddings
-from langchain_community.embeddings.openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 
-dotenv.load_dotenv(".env")
+dotenv.load_dotenv("../.env")
 
 def relevance_score_fn(score: float) -> float:
     """Return a similarity score on a scale [0, 1]."""
