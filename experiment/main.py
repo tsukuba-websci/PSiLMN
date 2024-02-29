@@ -55,7 +55,7 @@ def test_mmlu(model: str = "mistral"):
                 option_d = row["D"]
                 correct_response = row["target"]
 
-                agent_input = f"Can you answer the following question as accurately as possible? {question}\nA) {option_a}\nB) {option_b}\nC) {option_c}\nD) {option_d}\nExplain your answer, putting the answer in the form (X) at the end of your response"
+                agent_input = f"Can you answer the following question as accurately as possible? {question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nExplain your answer, putting the answer in the form (X) with brackets, at the end of your response."
 
                 # load new agents so that agents memory is not carried over
                 graph, agents = load_agents(network_type, num_agents, model=model)
