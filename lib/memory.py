@@ -12,6 +12,8 @@ from langchain_community.docstore import InMemoryDocstore
 import dotenv
 from langchain_community.llms import Ollama
 from langchain_community.embeddings import OllamaEmbeddings
+from langchain_community.embeddings.openai import OpenAIEmbeddings
+
 dotenv.load_dotenv(".env")
 
 def relevance_score_fn(score: float) -> float:
@@ -21,14 +23,17 @@ def relevance_score_fn(score: float) -> float:
 class Memory:
     """Memory for the generative agent."""
 
-    def __init__(self, model) -> None:
+    def __init__(self, model: str = "mistral") -> None:
 
         if "mistral" in model:
-            embedding_fn = OllamaEmbeddings(model=model)
+            embedding_fn = OllamaEmbeddings(model="mistral:instruct")
             embedding_size = 4096
         elif model == "phi":
-            embedding_fn = OllamaEmbeddings(model=model)
+            embedding_fn = OllamaEmbeddings(model="phi")
             embedding_size = 2560
+        elif "gpt-3.5-turbo" in model:
+            embedding_size = 1536
+            embedding_fn = OpenAIEmbeddings(model="gpt-3.5-turbo-0125")
         else:
             raise ValueError(f"Unknown model: {model}")
         

@@ -1,10 +1,12 @@
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 import dotenv
 from lib.memory import Memory
 from langchain_community.llms import Ollama
+from langchain_openai import ChatOpenAI
+from langchain.schema.language_model import BaseLanguageModel
 from faker import Faker
 import random
 
@@ -13,18 +15,25 @@ dotenv.load_dotenv(".env")
 class Agent:
     """Generative Agent"""
 
-    def __init__(self, id: str, name: str, age: int = 40, hobby: str = "Not Applicable", job: str = "Not Applicable", personality: str = "Not Applicable", model: str = "mistral:instruct") -> None:
+    def __init__(self, id: str, name: str, personality: str = "Not Applicable", model: str = "mistral") -> None:
+
+        if "mistral" in model:
+            llm = Ollama(model="mistral:instruct")
+        elif model == "phi":
+            llm = Ollama(model="phi")
+        elif "gpt-3.5-turbo" in model:
+            llm = ChatOpenAI()
+        else:
+            raise ValueError(f"Unknown model: {model}")
+
         self.id = id
         self.name = name
-        self.age = age
-        self.job = job
-        self.hobby = hobby
         self.personality = personality
         self.verbose = False
-        self.status = f"Name: {name}, Age: {age}, Job: {job}, Hobby: {hobby}, Personality: {personality}"
+        self.status = f"Name: {name}, Personality: {personality}"
         self.response = ""
         self.neighbor_resonse = ""
-        self.llm = Ollama(model=model, num_predict=1)
+        self.llm = llm
         self.memory = Memory(model=model)
 
     @staticmethod
@@ -38,21 +47,14 @@ class Agent:
 
     def interview(self, question: str, correspodee: str = "Interviewer") -> str:
         """Generate a response to a given prompt."""
-
         prompt = PromptTemplate.from_template(
-            "Respond with what {agent_name} would say."
-            + "\nThe following is {agent_name}'s status: {agent_status}"
-            + "\nThe following are {agent_name}'s relevant memories: {relevant_memories}"
-            + "\n{correspondee}: {question}"
-            + "\n{agent_name}:"
+            "{correspondee}: {question}"
+            +"\n{agent_name}:"
         )
 
-        relevant_memories_str = "\n".join(self.memory.get_relevant_memories(question))
         kwargs: Dict[str, Any] = dict(
-            relevant_memories=relevant_memories_str,
             agent_name=self.name,
             question=question,
-            agent_status=self.status,
             correspondee=correspodee,
         )
 
@@ -119,3 +121,35 @@ def fake_job():
 
 def fake_age():
     return random.randint(18, 65)
+
+def solve_math_problems(input_str):
+    pattern = r"\d+\.?\d*"
+
+    matches = re.findall(pattern, input_str)
+    if matches:
+        return matches[-1]
+
+    return None
+
+def parse_answer(input_str):
+    pattern = r'\(([a-zA-Z])\)'
+    matches = re.findall(pattern, input_str)
+
+    solution = None
+
+    for match_str in matches[::-1]:
+        solution = match_str.upper()
+        if solution:
+            break
+
+    return solution
+
+def parse_response_mmlu(response: str) -> Optional[str]:
+    """
+    Parse the response for MMLU questions
+    """
+
+    answer = parse_answer(response)
+
+    return answer
+
