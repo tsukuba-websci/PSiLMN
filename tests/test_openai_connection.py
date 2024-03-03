@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 
-dotenv.load_dotenv(".env")
+dotenv.load_dotenv("../.env")
 
 def test_openai_connection():
     prompt = PromptTemplate.from_template("What is the capital of {country}?")

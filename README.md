@@ -17,4 +17,20 @@ Install the required packages using poetry.
 poetry install
 ```
 
+## Testing
+To run the tests, use the following command.
+
+```
+cd tests
+poetry run pytest
+```
+
+## Running the Experiment
+To run the experiment, use the following command.
+
+```
+cd experiment
+poetry run python main.py
+```
+
 

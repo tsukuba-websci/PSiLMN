@@ -10,7 +10,7 @@ from langchain.schema.language_model import BaseLanguageModel
 from faker import Faker
 import random
 
-dotenv.load_dotenv(".env")
+dotenv.load_dotenv("../.env")
 
 class Agent:
     """Generative Agent"""
