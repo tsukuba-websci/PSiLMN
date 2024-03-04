@@ -22,7 +22,7 @@ class Agent:
         elif model == "phi":
             llm = Ollama(model="phi")
         elif "gpt-3.5-turbo" in model:
-            llm = ChatOpenAI()
+            llm = ChatOpenAI(max_tokens=250)
         else:
             raise ValueError(f"Unknown model: {model}")
 
