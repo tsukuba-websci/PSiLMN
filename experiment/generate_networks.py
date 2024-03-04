@@ -2,6 +2,88 @@ import matplotlib.pyplot as plt
 from typing import List
 import networkx as nx
 import os
+from xml.etree.ElementTree import ElementTree
+import json
+
+def graphml_to_json(filename: str, static: bool = False) -> None:
+    """
+    Convert a graphml file to json for use in the visualisation. Source: https://github.com/uskudnik/GraphGL/blob/master/examples/graphml-to-json.py
+    
+    Args:
+        filename (str): The name of the graphml file to convert.
+        static (bool): Whether to include static node attributes in the json file.
+    """
+
+    tree = ElementTree()
+    with open(filename, "r") as file:
+        tree.parse(file)
+
+    graphml = {
+        "graph": "{http://graphml.graphdrawing.org/xmlns}graph",
+        "node": "{http://graphml.graphdrawing.org/xmlns}node",
+        "edge": "{http://graphml.graphdrawing.org/xmlns}edge",
+        "data": "{http://graphml.graphdrawing.org/xmlns}data",
+        "label": "{http://graphml.graphdrawing.org/xmlns}data[@key='label']",
+        "x": "{http://graphml.graphdrawing.org/xmlns}data[@key='x']",
+        "y": "{http://graphml.graphdrawing.org/xmlns}data[@key='y']",
+        "size": "{http://graphml.graphdrawing.org/xmlns}data[@key='size']",
+        "r": "{http://graphml.graphdrawing.org/xmlns}data[@key='r']",
+        "g": "{http://graphml.graphdrawing.org/xmlns}data[@key='g']",
+        "b": "{http://graphml.graphdrawing.org/xmlns}data[@key='b']",
+        "weight": "{http://graphml.graphdrawing.org/xmlns}data[@key='weight']",
+        "edgeid": "{http://graphml.graphdrawing.org/xmlns}data[@key='edgeid']"
+    }
+
+    graph = tree.find(graphml.get("graph"))
+    nodes = graph.findall(graphml.get("node"))
+    links = graph.findall(graphml.get("edge"))
+
+    out = {"nodes":[], "links":[]}  # Change to list for nodes
+
+    for node in nodes:
+        node_data = {
+            "id": node.get("id"),
+            "label": getattr(node.find(graphml.get("label")), "text", "")
+        }
+        if static:
+            node_data.update({
+                "size": float(getattr(node.find(graphml.get("size")), "text", 0)),
+                "r": getattr(node.find(graphml.get("r")), "text", 0),
+                "g": getattr(node.find(graphml.get("g")), "text", 0),
+                "b": getattr(node.find(graphml.get("b")), "text", 0),
+                "x": float(getattr(node.find(graphml.get("x")), "text", 0)),
+                "y": float(getattr(node.find(graphml.get("y")), "text", 0))
+            })
+        out["nodes"].append(node_data)  # Append node data as dict to nodes list
+
+    for edge in links:
+        edge_data = {
+            "source": edge.get("source"),
+            "target": edge.get("target"),
+        }
+        edgeid = edge.find(graphml.get("edgeid"))
+        if edgeid is not None:
+            edge_data["edgeid"] = int(edgeid.text)
+        out["links"].append(edge_data)
+
+    network_type = filename.split("/")[1]
+    outfilename =  os.path.basename(filename).rsplit(".", 1)[0] + ".json"
+
+    # Get the script's directory (not the current working directory)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Construct the output directory path as '../visualise/public' relative to the script's directory
+    output_dir = os.path.abspath(os.path.join(script_dir, f'../visualise/public/data/networks/{network_type}'))
+    
+    # Ensure the output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Construct the full path for the output file
+    output_path = os.path.join(output_dir, outfilename)
+
+    # Write the JSON data to the output file
+    with open(output_path, "w") as outfile:
+        json.dump(out, outfile, indent=4)
+
 
 def save_networks(networks: List[nx.Graph], network_type:str, network_title: str) -> None:
     """
@@ -54,3 +136,10 @@ if __name__ == "__main__":
     save_networks(random_networks, "random_network", "Random Network")
     save_networks(fully_connected_networks, "fully_connected_network", "Fully Connected Network")
     save_networks(fully_disconnected_networks, "fully_disconnected_network", "Fully Disconnected Network")
+
+    # Convert the graphml files to json for use in the visualisation
+    networks = ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]
+    for network in networks:
+        graphml_to_json(filename=f'data/{network}/10.graphml')
+        graphml_to_json(filename=f'data/{network}/100.graphml')
+        graphml_to_json(filename=f'data/{network}/1000.graphml')
