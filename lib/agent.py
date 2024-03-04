@@ -131,25 +131,19 @@ def solve_math_problems(input_str):
 
     return None
 
-def parse_answer(input_str):
-    pattern = r'\(([a-zA-Z])\)'
-    matches = re.findall(pattern, input_str)
-
-    solution = None
-
-    for match_str in matches[::-1]:
-        solution = match_str.upper()
-        if solution:
-            break
-
-    return solution
-
 def parse_response_mmlu(response: str) -> Optional[str]:
     """
     Parse the response for MMLU questions
     """
 
-    answer = parse_answer(response)
+    pattern = r'\(([a-zA-Z])\)'
+    matches = re.findall(pattern, response)
+
+    answer = None
+
+    for match_str in matches[::-1]:
+        answer = match_str.upper()
+        if answer:
+            break
 
     return answer
-
