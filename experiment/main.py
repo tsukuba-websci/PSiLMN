@@ -28,10 +28,10 @@ def test_mmlu(model: str = "mistral", rounds: int = 3):
 
     for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network"]:
 
-        for num_agents in [10]: # todo: for 10, 100, 1000
+        for num_agents in [10, 100]: # todo: for 10, 100, 1000
 
             # Construct the path for the output file
-            agent_output_file = Path(f"output/agent_responses/{network_type}_{num_agents}.csv")
+            agent_output_file = Path(f"output/agent_responses/{network_type}/{num_agents}.csv")
             # Ensure the directory exists
             agent_output_file.parent.mkdir(parents=True, exist_ok=True)
 
