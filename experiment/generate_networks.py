@@ -69,16 +69,7 @@ def graphml_to_json(filename: str, static: bool = False) -> None:
     network_type = filename.split("/")[1]
     outfilename =  os.path.basename(filename).rsplit(".", 1)[0] + ".json"
 
-    # Get the script's directory (not the current working directory)
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    # Construct the output directory path as '../visualise/public' relative to the script's directory
-    output_dir = os.path.abspath(os.path.join(script_dir, f'../visualise/public/data/networks/{network_type}'))
-    
-    # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Construct the full path for the output file
-    output_path = os.path.join(output_dir, outfilename)
+    output_path = f'data/{network_type}/{outfilename}'
 
     # Write the JSON data to the output file
     with open(output_path, "w") as outfile:
