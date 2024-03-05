@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
     model = args.model
 
-    test_mmlu(model=model, rounds = 2)
+    test_mmlu(model=model)
 
     pass
 
