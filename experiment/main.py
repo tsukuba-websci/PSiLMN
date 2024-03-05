@@ -30,12 +30,12 @@ def test_mmlu(model: str = "mistral", rounds: int = 3):
     dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test").to_pandas()
 
     # todo: undo the limit of questions
-    dataset = dataset.head(2)
+    dataset = dataset.head(100)
     num_questions = len(dataset)
 
-    for network_type in ["fully_connected_network"]:
+    for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network"]:
 
-        for num_agents in [100]: # todo: for 10, 100, 1000
+        for num_agents in [10,100]: # todo: for 10, 100, 1000
 
             # Construct the path for the output file
             agent_output_file = Path(f"output/agent_responses/{network_type}/{num_agents}.csv")
