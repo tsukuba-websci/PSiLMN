@@ -11,6 +11,7 @@ from typing import Dict, Tuple
 from tqdm import tqdm
 import csv
 import argparse
+import tiktoken
 
 def test_mmlu(model: str = "mistral", rounds: int = 3):
     """
@@ -20,15 +21,21 @@ def test_mmlu(model: str = "mistral", rounds: int = 3):
         model (str): The model to run the experiment with. Should be one of 'mistral', 'phi', or 'gpt-3.5-turbo'.
     """
     
+    # todo: allow for other models
+    if "gpt-3.5-turbo" in model:
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        token_buffer = 500
+        max_tokens = 16385 - token_buffer # max tokens for gpt-3.5-turbo
+
     dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test").to_pandas()
 
     # todo: undo the limit of questions
     dataset = dataset.head(2)
     num_questions = len(dataset)
 
-    for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network"]:
+    for network_type in ["fully_connected_network"]:
 
-        for num_agents in [10, 100]: # todo: for 10, 100, 1000
+        for num_agents in [100]: # todo: for 10, 100, 1000
 
             # Construct the path for the output file
             agent_output_file = Path(f"output/agent_responses/{network_type}/{num_agents}.csv")
@@ -72,7 +79,14 @@ def test_mmlu(model: str = "mistral", rounds: int = 3):
                         agent = agents[node]
                         # form a string on all neighbors' responses
                         neighbors_responses = [f"Agent {neighbor}: {agents[neighbor].response}" for neighbor in graph.neighbors(node)]
-                        agent.neighbor_resonse = "\n".join(neighbors_responses)
+                        neighbor_resonse = "\n".join(neighbors_responses)
+
+                        # need to limit the context window
+                        neighbor_resonse_encoded = encoding.encode(neighbor_resonse)
+                        neighbor_resonse_encoded = neighbor_resonse_encoded[:max_tokens]
+                        neighbor_resonse = encoding.decode(neighbor_resonse_encoded)
+
+                        agent.neighbor_resonse = neighbor_resonse
 
 def load_agents(network_type: str, n: int, model: str) -> Tuple[nx.Graph, Dict[int, Agent]]:
     """
@@ -110,7 +124,7 @@ def get_response(agent: Agent, input: str) -> str:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("model", type=str, choices=['mistral', 'phi', 'gpt-3.5-turbo'], default='gpt-3.5-turbo', help="The model to run the experiment with.")
+    parser.add_argument("model", type=str, choices=['gpt-3.5-turbo'], default='gpt-3.5-turbo', help="The model to run the experiment with.")
 
     args = parser.parse_args()
 
