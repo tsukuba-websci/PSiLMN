@@ -20,6 +20,9 @@ GRAPH_TYPE = ['fully_connected_network',
             'random_network',
             'watts_strogatz_network']
 
+AGENT_RESPONSES_REP = 'output/agent_responses/'
+OUTPUT_ANALYSE_REP = "output/analysis/"
+
 class Analyse:
     """Meta data for a given graph and size"""
 
@@ -27,7 +30,8 @@ class Analyse:
         # Type is a int, it is easier to compare
         self.type = file_name = GRAPH_TYPE.index(csv_path.split('/')[2])
         self.num_agents = int(csv_path.split('/')[3].split('.')[0])
-        self.path = csv_path
+        # The agent output is parsed and only the parsed file path is saved.
+        self.path = parse_output_mmlu(csv_path, GRAPH_TYPE[self.type], self.num_agents)
         self.__accuracy = None
         self.__consensus = None
 
@@ -55,15 +59,14 @@ class Analyse:
     def plotDynamicEvolution(self) -> None :
         created_figs(self.path)
 
-def created_figs(file_path: str) -> None:
+def created_figs(parsed_file_path: str, network_type: str) -> None:
 
-    df = pd.read_csv(file_path, delimiter='|')
+    df = pd.read_csv(parsed_file_path, delimiter='|')
 
     df['parsed_response'] = df['response'].apply(parse_response_mmlu)
     df['correct'] = df['parsed_response'] == df['correct_response']
 
-    network_type = file_path.split('/')[2]
-    num_agents = file_path.split('/')[3].split('.')[0]
+    num_agents = df['agent_id'].unique().max() + 1
 
     graph = nx.read_graphml(f'experiment/data/{network_type}/{num_agents}.graphml')
     pos = nx.spring_layout(graph)
@@ -107,11 +110,9 @@ def created_figs(file_path: str) -> None:
             os.remove(image_path)
 
 # Function to calculate the accuracy of group responses for each round
-def calculate_accuracy(file_path: str) -> pd.DataFrame:
+def calculate_accuracy(parsed_file_path: str) -> pd.DataFrame:
     # Read the CSV file
-    df = pd.read_csv(file_path, delimiter='|')
-    df['parsed_response'] = df['response'].apply(parse_response_mmlu)
-    df['correct'] = df['parsed_response'] == df['correct_response']
+    df = pd.read_csv(parsed_file_path, delimiter='|')
 
     num_agent = df['agent_id'].unique().size
 
@@ -129,12 +130,9 @@ def calculate_accuracy(file_path: str) -> pd.DataFrame:
 
     return accuracy_per_round
 
-def find_evolutions(file_path) -> pd.DataFrame :
+def find_evolutions(parsed_file_path) -> pd.DataFrame :
     opinion_evol_list = [] # list to be turned into a dataframe
-    df = pd.read_csv(file_path, delimiter='|')
-
-    df['parsed_response'] = df['response'].apply(parse_response_mmlu)
-    df['correct'] = df['parsed_response'] == df['correct_response']
+    df = pd.read_csv(parsed_file_path, delimiter='|')
 
     for id in df['agent_id'].unique():
         for question in df['question_number'].unique():
@@ -158,11 +156,9 @@ def find_evolutions(file_path) -> pd.DataFrame :
                 opinion_evol_list.append([id, str(round), type])
     return pd.DataFrame(columns = ['agent_id', 'round', 'type'], data=opinion_evol_list)   
 
-def calculate_consensus(file_path: str) -> pd.DataFrame :
+def calculate_consensus(parsed_file_path: str) -> pd.DataFrame :
     # Read the CSV file
-    df = pd.read_csv(file_path, delimiter='|')
-    df['parsed_response'] = df['response'].apply(parse_response_mmlu)
-    df['correct'] = df['parsed_response'] == df['correct_response']
+    df = pd.read_csv(parsed_file_path, delimiter='|')
 
     num_agent = df['agent_id'].unique().size
 
@@ -175,20 +171,43 @@ def calculate_consensus(file_path: str) -> pd.DataFrame :
 
     return final_consensus[['question_number', 'consensus']]
 
+def parse_output_mmlu(csv_file: str, res_file_name : str, num_agents: int) -> str:
+    """
+        Parse agent response to analyse which answer is correct and which is not.
+    Save the result in OUTPUT_ANALYSE_REP, adding '_parsed' res_file_name.
+    Return the path of the result file.
+    """
+    df = pd.read_csv(csv_file, delimiter='|')
+
+    # analysing responses to find the correct ones
+    df['parsed_response'] = df['response'].apply(parse_response_mmlu)
+    df['correct'] = df['parsed_response'] == df['correct_response']
+
+    # removing useless columns
+    df = df[['agent_id', 'round', 'question_number', 'correct']]
+
+    # saving data, creating the directory if it doesnot exist
+    save_path = f'{OUTPUT_ANALYSE_REP}parsed_agent_responses/'
+    Path(save_path).mkdir(parents=True, exist_ok=True)
+
+    save_path = f'{save_path}{res_file_name}_{num_agents}_parsed.csv'
+    df.to_csv(save_path, mode='w', sep='|', index=False)
+
+    return save_path
+
 if __name__ == "__main__":
     
     # Create the new directory structure if it does not exist
-    output_analyse_path = "output/analysis/"
-    Path(output_analyse_path).mkdir(parents=True, exist_ok=True)
+    Path(OUTPUT_ANALYSE_REP).mkdir(parents=True, exist_ok=True)
 
     # Specify the path to your CSV files
-    csv_files = glob.glob('output/agent_responses/**/*.csv', recursive=True)
+    csv_files = glob.glob(f'{AGENT_RESPONSES_REP}**/*.csv', recursive=True)
 
     # analyses[i] is a list wich contain analyses relative to graphs of type i
     analyses = [None] * len(GRAPH_TYPE)
 
     # reset result files and write headers
-    f = open(f'{output_analyse_path}accuracy.csv', 'w', newline='')
+    f = open(f'{OUTPUT_ANALYSE_REP}accuracy.csv', 'w', newline='')
     writer = csv.writer(f)
     writer.writerow(['graph_type', 'size', 'accuracy round 1', 'accuracy round 2', 'accuracy round 3'])
     f.close()
@@ -199,13 +218,13 @@ if __name__ == "__main__":
         current_analyse = Analyse(file) 
         
         # Create figs for each simulation
-        # created_figs(file)
+        # created_figs(file, GRAPH_TYPE[current_analyse.type])
 
         # Calculate the accuracy of group responses
         accuracy = current_analyse.getAccuracy()
 
         # save accuracy
-        with open(f'{output_analyse_path}accuracy.csv', 'a', newline='') as result_file:
+        with open(f'{OUTPUT_ANALYSE_REP}accuracy.csv', 'a', newline='') as result_file:
             writer = csv.writer(result_file)
             writer.writerow([GRAPH_TYPE[current_analyse.type],
                              current_analyse.num_agents,
@@ -217,7 +236,7 @@ if __name__ == "__main__":
         consensus = current_analyse.getConsensus()
 
         # create the result path or reset if it already exists
-        result_file_path = f'{output_analyse_path}consensus/{GRAPH_TYPE[current_analyse.type]}/'
+        result_file_path = f'{OUTPUT_ANALYSE_REP}consensus/{GRAPH_TYPE[current_analyse.type]}/'
         Path(result_file_path).mkdir(parents=True, exist_ok=True)
 
         # Draw the plot and save it
@@ -242,7 +261,7 @@ if __name__ == "__main__":
         # plt.title(f"opinion changes during the round for {current_analyse.num_agents} agents \nin a {GRAPH_TYPE[current_analyse.type]}")
 
         # # Save the fig
-        # file_path = f'{output_analyse_path}/opinion_changes/{GRAPH_TYPE[current_analyse.type]}/'
+        # file_path = f'{OUTPUT_ANALYSE_REP}/opinion_changes/{GRAPH_TYPE[current_analyse.type]}/'
         # Path(file_path).mkdir(parents=True, exist_ok=True)
         # plt.savefig(Path(f'{file_path}/{current_analyse.num_agents}.png'))
         # plt.close()
@@ -269,7 +288,7 @@ if __name__ == "__main__":
     plt.xlabel('Number of agents')
     plt.ylabel('accuracy (%)')
     plt.grid(True)
-    plot_path = Path(output_analyse_path + 'accuracy_vs_number_of_agents.png')
+    plot_path = Path(OUTPUT_ANALYSE_REP + 'accuracy_vs_number_of_agents.png')
     plt.savefig(plot_path)
     plt.close()
 
@@ -284,6 +303,6 @@ if __name__ == "__main__":
     plt.xlabel('Round number')
     plt.ylabel('accuracy (%)')
     plt.grid(True)
-    plot_path = Path(output_analyse_path + 'accuracy_vs_round.png')
+    plot_path = Path(OUTPUT_ANALYSE_REP + 'accuracy_vs_round.png')
     plt.savefig(plot_path)
     plt.close()
