@@ -15,10 +15,11 @@ import matplotlib.pyplot as plt
 import imageio
 import seaborn as sns
 
-GRAPH_TYPE = ['fully_connected_network',
-            'scale_free_network',
-            'random_network',
-            'watts_strogatz_network']
+GRAPH_TYPE = ['fully_connected_network']#,
+                # 'fully_disconnected_network',
+                # 'scale_free_network',
+                # 'random_network',
+                # 'watts_strogatz_network']
 
 AGENT_RESPONSES_REP = 'output/agent_responses/'
 OUTPUT_ANALYSE_REP = "output/analysis/"
@@ -33,13 +34,26 @@ class Analyse:
         # The agent output is parsed and only the parsed file path is saved.
         self.path = parse_output_mmlu(csv_path, GRAPH_TYPE[self.type], self.num_agents)
         self.__accuracy = None
+        self.__consensusPerQuestion = None
         self.__consensus = None
+        self.__consensusSimpson = None
 
     def setAccuracy(self) -> None:
         self.__accuracy = calculate_accuracy(self.path)
 
+    def setConsensusPerQuestion(self) -> None:
+        self.__consensusPerQuestion = calculate_consensus_per_question(self.path)
+
     def setConsensus(self) -> None:
-        self.__consensus = calculate_consensus(self.path)
+        self.__consensus = self.getConsensusPerQuestion()['consensus'].mean()
+
+    def setConsensusSimpson(self) -> None:
+        '''
+            The probability that two different agents randomly selected heve the
+        same responses.
+        '''
+        self.__consensusSimpson = self.getConsensusPerQuestion()['simpson'].mean()
+        
 
     def getAccuracy(self) -> list[int]:
         # We check if it as already been computed
@@ -47,11 +61,23 @@ class Analyse:
             self.setAccuracy()
         return self.__accuracy
 
-    def getConsensus(self) -> pd.DataFrame:
+    def getConsensusPerQuestion(self) -> pd.DataFrame:
+        # We check if it as already been computed
+        if self.__consensusPerQuestion is None:
+            self.setConsensusPerQuestion()
+        return self.__consensusPerQuestion
+
+    def getConsensus(self) -> float:
         # We check if it as already been computed
         if self.__consensus is None:
             self.setConsensus()
         return self.__consensus
+
+    def getConsensusSimpson(self) -> float:
+        # We check if it as already been computed
+        if self.__consensusSimpson is None:
+            self.setConsensusSimpson()
+        return self.__consensusSimpson        
 
     def ParseOpinionEvolution(self) -> pd.DataFrame :
         return find_evolutions(self.path)
@@ -94,7 +120,7 @@ def created_figs(parsed_file_path: str, network_type: str) -> None:
             # Ensure the directory exists
             os.makedirs(directory, exist_ok=True)
             plt.savefig(image_path)
-            plt.close()
+            plt.close('all')
 
             images.append(image_path)
 
@@ -118,9 +144,11 @@ def calculate_accuracy(parsed_file_path: str) -> pd.DataFrame:
 
     # We select only the correct responses and remove unecessary columns 
     accuracy_per_round = df[['round', 'question_number', 'correct']].query('correct')
+    accuracy_per_round.to_csv(Path(f'{OUTPUT_ANALYSE_REP}step1.csv', index=False))
 
     # We count correct answers for each line
     accuracy_per_round = accuracy_per_round.groupby(['round', 'question_number']).count().reset_index()
+    accuracy_per_round.to_csv(Path(f'{OUTPUT_ANALYSE_REP}step2.csv', index=False))
 
     # The network gives the right answer to a question if count > num agent / 2 
     accuracy_per_round['accuracy'] = accuracy_per_round['correct'].apply(lambda correct_num : 1 if correct_num > num_agent / 2 else 0)
@@ -128,6 +156,7 @@ def calculate_accuracy(parsed_file_path: str) -> pd.DataFrame:
     # Then we compute the average accuracy (for each round)
     accuracy_per_round = accuracy_per_round[['round', 'accuracy']].groupby('round').mean()
 
+    accuracy_per_round.to_csv(Path(f'{OUTPUT_ANALYSE_REP}step3.csv', index=False))
     return accuracy_per_round
 
 def find_evolutions(parsed_file_path) -> pd.DataFrame :
@@ -156,7 +185,9 @@ def find_evolutions(parsed_file_path) -> pd.DataFrame :
                 opinion_evol_list.append([id, str(round), type])
     return pd.DataFrame(columns = ['agent_id', 'round', 'type'], data=opinion_evol_list)   
 
-def calculate_consensus(parsed_file_path: str) -> pd.DataFrame :
+def calculate_consensus_per_question(parsed_file_path: str) -> pd.DataFrame :
+    """
+    """
     # Read the CSV file
     df = pd.read_csv(parsed_file_path, delimiter='|')
 
@@ -169,7 +200,15 @@ def calculate_consensus(parsed_file_path: str) -> pd.DataFrame :
     final_consensus = final_consensus.groupby(['question_number']).count().reset_index()
     final_consensus['consensus'] = final_consensus['correct'].apply(lambda correct : correct/num_agent)
 
-    return final_consensus[['question_number', 'consensus']]
+    # Simpson consensus computation. This accuracy is computed as the probability that two answers
+    # randomly selected are the same.
+    simpson = df.query("round == 2").groupby(['question_number', 'parsed_response']).size().reset_index(name = 'count')
+    simpson['simpson'] = simpson['count'].apply(lambda count : count/num_agent).apply(lambda p : p*p)
+    simpson = simpson.groupby('question_number').sum().reset_index()[['question_number', 'parsed_response', 'simpson']]
+
+    # Finally, we join tables
+    final_consensus = pd.merge(final_consensus, simpson, on = 'question_number')#.set_index(to = 'question_number')
+    return final_consensus[['question_number', 'parsed_response', 'consensus', 'simpson']]
 
 def parse_output_mmlu(csv_file: str, res_file_name : str, num_agents: int) -> str:
     """
@@ -184,7 +223,7 @@ def parse_output_mmlu(csv_file: str, res_file_name : str, num_agents: int) -> st
     df['correct'] = df['parsed_response'] == df['correct_response']
 
     # removing useless columns
-    df = df[['agent_id', 'round', 'question_number', 'correct']]
+    df = df[['agent_id', 'round', 'question_number', 'parsed_response','correct']]
 
     # saving data, creating the directory if it doesnot exist
     save_path = f'{OUTPUT_ANALYSE_REP}parsed_agent_responses/'
@@ -212,6 +251,11 @@ if __name__ == "__main__":
     writer.writerow(['graph_type', 'size', 'accuracy round 1', 'accuracy round 2', 'accuracy round 3'])
     f.close()
 
+    f = open(f'{OUTPUT_ANALYSE_REP}consensus.csv', 'w', newline='')
+    writer = csv.writer(f)
+    writer.writerow(['graph_type', 'size', 'consensus', 'consensus_simpson'])
+    f.close()
+
     # Loop on each csv file
     for file in csv_files:
         print(file)
@@ -233,23 +277,39 @@ if __name__ == "__main__":
                              accuracy.query('round == 2').values[0][0]])
             
         # Calculate the consensus for this graph
-        consensus = current_analyse.getConsensus()
+        consensus = current_analyse.getConsensusPerQuestion()
 
         # create the result path or reset if it already exists
         result_file_path = f'{OUTPUT_ANALYSE_REP}consensus/{GRAPH_TYPE[current_analyse.type]}/'
         Path(result_file_path).mkdir(parents=True, exist_ok=True)
 
-        # Draw the plot and save it
+        # Draw plots and save them
         plt.figure(figsize=(16, 9))
         sns.displot(consensus, x="consensus")
         plt.title(f"average consensus per question for {current_analyse.num_agents} agents\nin {GRAPH_TYPE[current_analyse.type]}")
         plt.xlabel("consensus (proportion of correct answers)")
-        plt.ylabel("frequence (%)")
-        plt.savefig(f'{result_file_path}{current_analyse.num_agents}.png')
-        plt.close()
+        plt.ylabel("frequency (%)")
+        plt.savefig(f'{result_file_path}consensus_{current_analyse.num_agents}.png')
+        plt.close('all')
+
+        plt.figure(figsize=(16, 9))
+        sns.displot(consensus, x="simpson")
+        plt.title(f"average simpson consensus per question for {current_analyse.num_agents} agents\nin {GRAPH_TYPE[current_analyse.type]}")
+        plt.xlabel("simpson probability")
+        plt.ylabel("frequency (%)")
+        plt.savefig(f'{result_file_path}simpson_{current_analyse.num_agents}.png')
+        plt.close('all')
 
         # save the csv file
         consensus.to_csv(f'{result_file_path}{current_analyse.num_agents}.csv', mode='w', sep=',', index=False)
+
+        # save the mean for both metrics
+        with open(f'{OUTPUT_ANALYSE_REP}consensus.csv', 'a', newline='') as result_file:
+            writer = csv.writer(result_file)
+            writer.writerow([GRAPH_TYPE[current_analyse.type],
+                             current_analyse.num_agents,
+                             current_analyse.getConsensus(),
+                             current_analyse.getConsensusSimpson()])
 
         # # Parse the opinion evolution list and display it
         # opinion_evol = current_analyse.ParseOpinionEvolution()
@@ -264,7 +324,7 @@ if __name__ == "__main__":
         # file_path = f'{OUTPUT_ANALYSE_REP}/opinion_changes/{GRAPH_TYPE[current_analyse.type]}/'
         # Path(file_path).mkdir(parents=True, exist_ok=True)
         # plt.savefig(Path(f'{file_path}/{current_analyse.num_agents}.png'))
-        # plt.close()
+        # plt.close('all')
 
         # add analyse to the list for later
         if not (analyses[current_analyse.type]):
@@ -279,7 +339,6 @@ if __name__ == "__main__":
         for analyse in analyses[graph_type]:
             curve.append( (analyse.num_agents, analyse.getAccuracy().query('round == 2').values[0][0]) )
         curve.sort(key = lambda point: point[0])
-        # ploting this curve with seaborn
         X = [point[0] for point in curve]
         Y = [point[1] for point in curve]
         plt.plot(X, Y, label=GRAPH_TYPE[graph_type])
@@ -290,7 +349,7 @@ if __name__ == "__main__":
     plt.grid(True)
     plot_path = Path(OUTPUT_ANALYSE_REP + 'accuracy_vs_number_of_agents.png')
     plt.savefig(plot_path)
-    plt.close()
+    plt.close('all')
 
     # round vs accuracy
     plt.figure(figsize=(16, 9))
@@ -305,4 +364,42 @@ if __name__ == "__main__":
     plt.grid(True)
     plot_path = Path(OUTPUT_ANALYSE_REP + 'accuracy_vs_round.png')
     plt.savefig(plot_path)
-    plt.close()
+    plt.close('all')
+
+    # consensus vs graph type
+    plt.figure(figsize=(16, 9))
+    for graph_type in range(len(analyses)):
+        curve = []
+        for analyse in analyses[graph_type]:
+            curve.append([analyse.num_agents, analyse.getConsensus()])
+        curve.sort(key = lambda point: point[0])
+        X = [point[0] for point in curve]
+        Y = [point[1] for point in curve]
+        plt.plot(X, Y, label = GRAPH_TYPE[graph_type])
+    plt.title("consensus vs agent graph size and graph type")
+    plt.legend()
+    plt.xlabel('number of agents (graph size)')
+    plt.ylabel('consensus (%)')
+    plt.grid(True)
+    plot_path = Path(OUTPUT_ANALYSE_REP + 'consensus_vs_network.png')
+    plt.savefig(plot_path)
+    plt.close('all')
+
+    # simpson consensus vs graph type
+    plt.figure(figsize=(16, 9))
+    for graph_type in range(len(analyses)):
+        curve = []
+        for analyse in analyses[graph_type]:
+            curve.append([analyse.num_agents, analyse.getConsensusSimpson()])
+        curve.sort(key = lambda point: point[0])
+        X = [point[0] for point in curve]
+        Y = [point[1] for point in curve]
+        plt.plot(X, Y, label = GRAPH_TYPE[graph_type])
+    plt.title("simpson consensus vs agent graph size and graph type")
+    plt.legend()
+    plt.xlabel('number of agents (graph size)')
+    plt.ylabel('consensus (%)')
+    plt.grid(True)
+    plot_path = Path(OUTPUT_ANALYSE_REP + 'simpson_consensus_vs_network.png')
+    plt.savefig(plot_path)
+    plt.close('all')
