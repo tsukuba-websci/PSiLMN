@@ -19,6 +19,8 @@ datasets = "^2.17.1"
 tdqm = "^0.0.1"
 langchain-openai = "^0.0.8"
 imageio = "^2.34.0"
+lorem-text = "^2.1"
+aiofiles = "^23.2.1"
 
 
 [build-system]

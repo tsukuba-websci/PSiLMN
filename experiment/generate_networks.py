@@ -101,7 +101,7 @@ def save_networks(networks: List[nx.Graph], network_type:str, network_title: str
 
 if __name__ == "__main__":
     # Generate  networks with 10, 100, and 1000 nodes
-    nodes_list = [10, 100, 1000]
+    nodes_list = [5, 25, 50]
     
     scale_free_networks = [nx.scale_free_graph(n).to_undirected() for n in nodes_list]
     for G in scale_free_networks:
@@ -131,6 +131,9 @@ if __name__ == "__main__":
     # Convert the graphml files to json for use in the visualisation
     networks = ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]
     for network in networks:
+        graphml_to_json(filename=f'data/{network}/5.graphml')
         graphml_to_json(filename=f'data/{network}/10.graphml')
+        graphml_to_json(filename=f'data/{network}/25.graphml')
+        graphml_to_json(filename=f'data/{network}/50.graphml')
         graphml_to_json(filename=f'data/{network}/100.graphml')
         graphml_to_json(filename=f'data/{network}/1000.graphml')

@@ -5,34 +5,44 @@ root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
 from lib.agent import Agent, fake_name
-import networkx as nx
 from datasets import load_dataset
 from typing import Dict, Tuple
 from tqdm import tqdm
-import csv
+import networkx as nx
 import argparse
+import tiktoken
+import aiofiles
+import asyncio
+import random
+import glob
+import os
+import re
 
-def test_mmlu(model: str = "mistral", rounds: int = 3):
+async def test_mmlu(model: str = "mistral", rounds: int = 3):
     """
-    Test networks with the MMLU dataset.
+    Test agent networks with the MMLU dataset.
 
     Args:
         model (str): The model to run the experiment with. Should be one of 'mistral', 'phi', or 'gpt-3.5-turbo'.
+        rounds (int): The number of rounds to run the experiment for.
     """
     
+    # todo: allow for other models
+    if "gpt-3.5-turbo" in model:
+        encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
+        token_buffer = 500
+        max_tokens = 16385 - token_buffer # max tokens for gpt-3.5-turbo
+
     dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test").to_pandas()
 
-    # todo: undo the limit of questions
-    dataset = dataset.head(2)
+    dataset = dataset.head(100)
     num_questions = len(dataset)
 
-    for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network"]:
+    for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
 
-        for num_agents in [10, 100]: # todo: for 10, 100, 1000
+        for num_agents in [5,10,25,50,100]:
 
-            # Construct the path for the output file
             agent_output_file = Path(f"output/agent_responses/{network_type}/{num_agents}.csv")
-            # Ensure the directory exists
             agent_output_file.parent.mkdir(parents=True, exist_ok=True)
 
             # iterate through each of the questions in the mmul dataset
@@ -50,40 +60,20 @@ def test_mmlu(model: str = "mistral", rounds: int = 3):
                 # load new agents so that agents memory is not carried over
                 graph, agents = load_agents(network_type, num_agents, model=model)
 
-                for round in tqdm(range(rounds), desc="Rounds of Communication"):
-
-                    # get each agent's response
-                    for agent in agents.values():
-                        agent.response = get_response(agent=agent, input=agent_input)
-
-                        with open(agent_output_file, mode='a', newline='') as file:
-                            # Initialize csv.writer with the correct delimiter here
-                            writer = csv.writer(file, delimiter='|')
-                            
-                            # Check if the file is empty to write headers
-                            if file.tell() == 0:
-                                writer.writerow(['agent_id', 'round', 'question_number', 'response', 'correct_response'])
-                            
-                            # Now, you can write rows without specifying the delimiter
-                            writer.writerow([agent.id, round, question_number, agent.response, correct_response])
-
-                    # get the neighbor responses
-                    for node in graph.nodes:
-                        agent = agents[node]
-                        # form a string on all neighbors' responses
-                        neighbors_responses = [f"Agent {neighbor}: {agents[neighbor].response}" for neighbor in graph.neighbors(node)]
-                        agent.neighbor_resonse = "\n".join(neighbors_responses)
+                await ask_agents_and_write_responses(agents, agent_input, agent_output_file, question_number, correct_response, rounds, encoding, max_tokens, graph)
 
 def load_agents(network_type: str, n: int, model: str) -> Tuple[nx.Graph, Dict[int, Agent]]:
     """
     Generate a scale free network of n nodes, where each node is an agent.
     
     Args:
-        n (int): The number of nodes in the network. Should be one of 10, 100, or 1000.
+        network_type (str): The type of network to generate. Should be one of 'scale_free_network', 'watts_strogatz_network', 'random_network', 'fully_connected_network', 'fully_disconnected_network'.
+        n (int): The number of nodes in the network. Should be one of 5, 10, 25, 50, 100.
+        model (str): The model to run the experiment with. Should be one of 'mistral', 'phi', or 'gpt-3.5-turbo'.
     """
 
-    if n not in [10, 100, 1000] or network_type not in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
-        raise ValueError("Invalid network size or type. Please use one of 10, 100, 1000 for the network size and one of scale_free_network, watts_strogatz_network, random_network, fully_connected_network, fully_disconnected_network for the network type.")
+    if n not in [5, 10, 25, 50, 100] or network_type not in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
+        raise ValueError("Invalid network size or type. Please use one of 5, 10, 25, 100, 1000 for the network size and one of scale_free_network, watts_strogatz_network, random_network, fully_connected_network, fully_disconnected_network for the network type.")
     else:
         graph =  nx.read_graphml(f"data/{network_type}/{n}.graphml")
         agents_dict = {}
@@ -92,31 +82,81 @@ def load_agents(network_type: str, n: int, model: str) -> Tuple[nx.Graph, Dict[i
 
         return graph, agents_dict
 
-def get_response(agent: Agent, input: str) -> str:
-    """
-    Get the agents response to a question.
+async def write_responses_to_csv(file_path: str, responses: list):
 
-    Args:
-        agent (Agent): The agent to get a response from.
-    """
+    file_exists = os.path.exists(file_path)
+    file_is_empty = not os.path.getsize(file_path) if file_exists else True
 
-    if agent.neighbor_resonse:
-        input = f"{input}\nUsing the solutions from other agents as additional information, give an updated response. The follo|ing are the responses of the other agents:\n{agent.neighbor_resonse}"
+    async with aiofiles.open(file_path, mode='a', newline='') as file:
+        # If the file is empty, write the header first
+        if file_is_empty:
+            header = "agent_id|round|question_number|response|correct_response\n"
+            await file.write(header)
 
-    response = agent.interview(input).replace("|", " ")
-    
-    return response
+        for response_row in responses:
+            # Use a pipe '|' as the delimiter for joining elements in the response_row
+            csv_line = '|'.join([str(item) for item in response_row]) + '\n'
+            # Write the formatted string to the file
+            await file.write(csv_line)
+
+async def get_response(agent: Agent, input: str) -> str:
+    response = await agent.ainterview(input)
+    return response.replace("|", " ")
+
+async def ask_agents_and_write_responses(agents, agent_input, agent_output_file, question_number, correct_response, rounds, encoding, max_tokens, graph):
+    for round in range(rounds):
+        # Ask each agent and gather responses
+        responses = await asyncio.gather(*(get_response(agent, agent_input) for agent in agents.values()))
+
+        # Update each agent's response
+        for agent, response in zip(agents.values(), responses):
+            agent.response = response
+
+        # Gather neighbor responses for each agent
+        for agent_id, agent in agents.items():
+            # randomise the order of the neighbors
+            neighbors = list(graph.neighbors(agent_id))
+            neighbors = random.shuffle(neighbors)
+            neighbors_responses = [f"Agent {neighbor}: {agents[neighbor].response}" for neighbor in neighbors]
+            neighbor_response = "\n".join(neighbors_responses)
+
+            # Limit for context window
+            neighbor_response_encoded = encoding.encode(neighbor_response)
+            neighbor_response_encoded = neighbor_response_encoded[:max_tokens]
+            neighbor_response = encoding.decode(neighbor_response_encoded)
+            agent.neighbor_response = neighbor_response
+
+        # Write responses to CSV
+        round_info = [[agent.id, round, question_number, f"{agent.response}", correct_response] for agent in agents.values()]
+        await write_responses_to_csv(str(agent_output_file), round_info)
+
+def make_single_line(filename: str):
+    with open(filename, 'r', encoding='utf-8') as infile:
+        content = infile.read()
+        pattern = re.compile(r'(\d+\|\d+\|\d+\|)([^|]+?)(\|[ABCD])', re.DOTALL)
+
+        def replace_newlines_and_quote(m):
+            response_text = m.group(2).replace("\n", " ").strip()
+            return f'{m.group(1)}"{response_text}"{m.group(3)}'
+
+        modified_content = re.sub(pattern, replace_newlines_and_quote, content)
+
+    with open(filename, 'w', encoding='utf-8') as outfile:
+        outfile.write(modified_content)
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("model", type=str, choices=['mistral', 'phi', 'gpt-3.5-turbo'], default='gpt-3.5-turbo', help="The model to run the experiment with.")
-
+    parser.add_argument("model", type=str, choices=['gpt-3.5-turbo'], default='gpt-3.5-turbo', help="The model to run the experiment with.")
     args = parser.parse_args()
-
     model = args.model
 
-    test_mmlu(model=model, rounds = 2)
+    # test mmlu
+    asyncio.run(test_mmlu(model=model))
+
+    # run post process on csv files
+    csv_files = glob.glob('output/agent_responses/**/*.csv', recursive=True)
+    for file in csv_files:
+        make_single_line(file)
 
     pass
-

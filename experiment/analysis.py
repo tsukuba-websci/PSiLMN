@@ -18,7 +18,11 @@ def created_figs(file_path: str) -> None:
 
     df = pd.read_csv(file_path, delimiter='|')
 
+    df['response'] = df['response'].astype(str)
+
+    # Now you can safely apply your function
     df['parsed_response'] = df['response'].apply(parse_response_mmlu)
+
     df['correct'] = df['parsed_response'] == df['correct_response']
 
     network_type = file_path.split('/')[2]
@@ -33,6 +37,7 @@ def created_figs(file_path: str) -> None:
     for question in questions:
         images = []  # To store paths of images for the current question
         for round_ in rounds:
+
             round_df = df[(df['round'] == round_) & (df['question_number'] == question)]
             color_map = ['green' if row['correct'] else 'red' for _, row in round_df.iterrows()]
 
@@ -40,11 +45,13 @@ def created_figs(file_path: str) -> None:
             nx.draw(graph, pos=pos, node_color=color_map, with_labels=True, node_size=700)
             plt.title(f'Q{question} R{round_}')
 
+            round_num = int(round_) + 1
+
             # Add round number text on the plot
-            plt.text(0.05, 0.95, f'Round: {round_}', transform=plt.gca().transAxes, fontsize=14, verticalalignment='top', bbox=dict(boxstyle="round", alpha=0.5, facecolor='white'))
+            plt.text(0.05, 0.95, f'Round: {round_num}', transform=plt.gca().transAxes, fontsize=14, verticalalignment='top', bbox=dict(boxstyle="round", alpha=0.5, facecolor='white'))
 
             # Save the plot for the current round
-            image_path = f'output/figs/{network_type}/{num_agents}_q{question}_r{round_+1}.png'
+            image_path = f'output/figs/{network_type}/{num_agents}_q{question}_r{round_num}.png'
             directory = os.path.dirname(image_path)
 
             # Ensure the directory exists
@@ -67,6 +74,7 @@ def created_figs(file_path: str) -> None:
 
 # Function to calculate the accuracy of group responses
 def calculate_accuracy(file_path):
+
     # Read the CSV file
     df = pd.read_csv(file_path, delimiter='|')
     
@@ -109,20 +117,26 @@ if __name__ == "__main__":
     # Specify the path to your CSV file
     csv_files = glob.glob('output/agent_responses/**/*.csv', recursive=True)
 
-    # Print the list of files
-    for file in csv_files:
-        
-        created_figs(file)
+    # Path for the results file
+    results_file_path = output_analyse_path / 'results.csv'
+    
+    # Open the results file in write mode to ensure it's created or overwritten
+    with open(results_file_path, 'w', newline='') as results_file:
+        writer = csv.writer(results_file)
+        # Write the headers
+        writer.writerow(['network_type', 'accuracy'])
+    
+        # Now process each CSV file and append its results
+        for file in csv_files:
+            # Temporarily commented out for context
+            # created_figs(file)
 
-        file_name = os.path.basename(file).split('.')[0]
-        network_type = file.split('/')[2]
+            file_name = os.path.basename(file).split('.')[0]
+            network_type = file.split('/')[2]
 
-        # Calculate the accuracy of group responses
-        accuracy = calculate_accuracy(file)
+            print(f"Processing {network_type}_{file_name}...")
+            # Calculate the accuracy of group responses
+            accuracy = calculate_accuracy(file)
 
-        with open('output/analysis/results.csv', 'a', newline='') as file:
-            writer = csv.writer(file)
-            # Check if the file is empty to write headers
-            if file.tell() == 0:
-                writer.writerow(['file_name', 'accuracy'])
+            # Write the network type and accuracy to the results file
             writer.writerow([f"{network_type}_{file_name}", accuracy])  
