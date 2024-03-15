@@ -15,7 +15,7 @@ dotenv.load_dotenv("../.env")
 class Agent:
     """Generative Agent"""
 
-    def __init__(self, id: str, name: str, personality: str = "Not Applicable", model: str = "mistral") -> None:
+    def __init__(self, id: str, name: str, bias: str = "None", personality: str = "Not Applicable", model: str = "mistral") -> None:
 
         if "mistral" in model:
             llm = Ollama(model="mistral:instruct")
@@ -39,6 +39,7 @@ class Agent:
         self.neighbor_resonse = ""
         self.llm = llm
         self.memory = Memory(model=model)
+        self.bias = bias 
 
     @staticmethod
     def _parse_list(text: str) -> List[str]:

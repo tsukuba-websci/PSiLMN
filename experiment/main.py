@@ -39,10 +39,9 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
     num_questions = len(dataset)
 
     for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
-
         for num_agents in [5,10,25,50,100]:
 
-            agent_output_file = Path(f"output/agent_responses/{network_type}/{num_agents}.csv")
+            agent_output_file = Path(f"output/unbiased/agent_responses/{network_type}/{num_agents}.csv")
             agent_output_file.parent.mkdir(parents=True, exist_ok=True)
 
             # iterate through each of the questions in the mmul dataset
@@ -116,7 +115,7 @@ async def ask_agents_and_write_responses(agents, agent_input, agent_output_file,
         for agent_id, agent in agents.items():
             # randomise the order of the neighbors
             neighbors = list(graph.neighbors(agent_id))
-            neighbors = random.shuffle(neighbors)
+            random.shuffle(neighbors) 
             neighbors_responses = [f"Agent {neighbor}: {agents[neighbor].response}" for neighbor in neighbors]
             neighbor_response = "\n".join(neighbors_responses)
 
