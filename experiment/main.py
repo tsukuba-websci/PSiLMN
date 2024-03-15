@@ -160,4 +160,3 @@ if __name__ == "__main__":
         make_single_line(file)
 
     pass
-
