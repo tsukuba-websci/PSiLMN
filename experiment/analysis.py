@@ -132,7 +132,7 @@ if __name__ == "__main__":
             # created_figs(file)
 
             file_name = os.path.basename(file).split('.')[0]
-            network_type = file.split('/')[2]
+            network_type = file.split('/')[3]
 
             print(f"Processing {network_type}_{file_name}...")
             # Calculate the accuracy of group responses
