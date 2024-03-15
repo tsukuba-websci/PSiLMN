@@ -65,6 +65,22 @@ class Agent:
         response = self.chain(prompt=prompt).invoke(kwargs)["text"].strip()
         
         return response
+    
+    async def ainterview(self, question: str, correspondee: str = "Interviewer") -> str:
+        """Generate a response to a given prompt."""
+        prompt = PromptTemplate.from_template(
+            "{correspondee}: {question}"
+            + "\n{agent_name}:"
+        )
+
+        kwargs: Dict[str, Any] = dict(
+            agent_name=self.name,
+            question=question,
+            correspondee=correspondee,
+        )
+
+        response = await self.chain(prompt=prompt).ainvoke(kwargs)
+        return response["text"].strip()
 
 def communicate(caller: Agent, callee: Agent, question: str, debate_rounds: int = 3) -> List[str]:
     """
