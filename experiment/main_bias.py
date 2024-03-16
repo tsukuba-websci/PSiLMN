@@ -34,12 +34,12 @@ async def test_mmlu_with_bias(model: str = "mistral", rounds: int = 3):
     
     dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test").to_pandas()
 
-    dataset = dataset.head(5)
+    dataset = dataset.head(100)
     num_questions = len(dataset)
 
     for bias in ["correct", "incorrect"]:
         for network_type in ["scale_free_network"]:
-            for num_agents in [25]:
+            for num_agents in [10, 25, 50, 100]:
                 agent_output_file = Path(f"output/biased/{bias}/agent_responses/{network_type}/{num_agents}.csv")
                 agent_output_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(agent_output_file, 'w') as file:
