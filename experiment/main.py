@@ -99,6 +99,10 @@ async def write_responses_to_csv(file_path: str, responses: list):
             await file.write(csv_line)
 
 async def get_response(agent: Agent, input: str) -> str:
+
+    if agent.neighbor_resonse and agent.bias == "None":
+        input = f"{input}\nBased on your previous response and the solutions of other the agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_resonse}"
+
     response = await agent.ainterview(input)
     return response.replace("|", " ")
 

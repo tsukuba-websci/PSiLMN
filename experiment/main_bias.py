@@ -96,6 +96,10 @@ def load_agents(network_type: str, n: int, model: str, bias: str) -> Tuple[nx.Gr
         return graph, agents_dict
 
 async def get_response(agent: Agent, input: str) -> str:
+
+    if agent.neighbor_resonse and agent.bias == "None":
+        input = f"{input}\nBased on your previous response and the solutions of other the agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_resonse}"
+
     response = await agent.ainterview(input)
     return response.replace("|", " ")
 
