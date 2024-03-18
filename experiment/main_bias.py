@@ -108,11 +108,10 @@ async def ask_agents_and_write_responses(agents, unbiased_agent_input, biased_ag
         biased_responses = await asyncio.gather(*(get_response(agent, biased_agent_input) for agent in biased_agents))
         unbiased_responses = await asyncio.gather(*(get_response(agent, unbiased_agent_input) for agent in unbiased_agents))
 
-        # Update each agent's response
-        for agent, response in zip(unbiased_agents, unbiased_responses):
-            agent.response = response
+        agent_responses = biased_responses + unbiased_responses
 
-        for agent, response in zip(biased_agents, biased_responses):
+        # Update each agent's response
+        for agent, response in zip(agents, agent_responses):
             agent.response = response
 
         # Gather neighbor responses for each agent
