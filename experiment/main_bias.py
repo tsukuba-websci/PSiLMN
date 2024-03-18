@@ -59,9 +59,9 @@ async def test_mmlu_with_bias(model: str = "mistral", rounds: int = 3):
 
                     unbiased_agent_input = f"Can you answer the following question as accurately as possible? {question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nExplain your answer, putting the answer in the form (A), (B), (C) or (D) with round brackets, at the end of your response."
                     if bias == "correct":
-                        biased_agent_input = f"{question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nThe correct answer is ({correct_response}). Briefly explain why, ending with therefore the answer is ({correct_response})."
+                        biased_agent_input = f"{question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nThe correct answer is ({correct_response}). Provide a brief explanation of why ({correct_response}) is the answer, ending with the phrase: therefore the answer is ({correct_response})."
                     elif bias == "incorrect":
-                        biased_agent_input = f"{question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nThe correct answer is ({incorrect_response}). Briefly explain why, ending with therefore the answer is ({incorrect_response})."
+                        biased_agent_input = f"{question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nYou need to pretend that the correct anser is ({incorrect_response}). Provide a brief explanation of why ({incorrect_response}) is the answer, ending with the phrase: therefore the answer is ({incorrect_response})."
 
                     # load new agents so that agents memory is not carried over
                     graph, agents = load_agents(network_type, num_agents, model=model, bias=bias)
@@ -111,7 +111,7 @@ async def ask_agents_and_write_responses(agents, unbiased_agent_input, biased_ag
         agent_responses = biased_responses + unbiased_responses
 
         # Update each agent's response
-        for agent, response in zip(agents, agent_responses):
+        for agent, response in zip(agents.values(), agent_responses):
             agent.response = response
 
         # Gather neighbor responses for each agent
