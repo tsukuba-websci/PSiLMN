@@ -36,7 +36,7 @@ class Agent:
         self.verbose = False
         self.status = f"Name: {name}, Personality: {personality}"
         self.response = ""
-        self.neighbor_resonse = ""
+        self.neighbor_response = ""
         self.llm = llm
         self.memory = Memory(model=model)
         self.bias = bias 

@@ -100,8 +100,8 @@ async def write_responses_to_csv(file_path: str, responses: list):
 
 async def get_response(agent: Agent, input: str) -> str:
 
-    if agent.neighbor_resonse and agent.bias == "None":
-        input = f"{input}\nBased on your previous response and the solutions of other the agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_resonse}"
+    if agent.neighbor_response and agent.bias == "None":
+        input = f"{input}\nBased on your previous response and the solutions of other the agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_response}"
 
     response = await agent.ainterview(input)
     return response.replace("|", " ")
@@ -113,7 +113,7 @@ async def ask_agents_and_write_responses(agents, agent_input, agent_output_file,
 
         # Update each agent's response
         for agent, response in zip(agents.values(), responses):
-            agent.response = response
+            agents[agent.id].response = response
 
         # Gather neighbor responses for each agent
         for agent_id, agent in agents.items():
@@ -128,6 +128,7 @@ async def ask_agents_and_write_responses(agents, agent_input, agent_output_file,
             neighbor_response_encoded = neighbor_response_encoded[:max_tokens]
             neighbor_response = encoding.decode(neighbor_response_encoded)
             agent.neighbor_response = neighbor_response
+            agents[agent_id].neighbor_response = neighbor_response
 
         # Write responses to CSV
         round_info = [[agent.id, round, question_number, f"{agent.response}", correct_response] for agent in agents.values()]
