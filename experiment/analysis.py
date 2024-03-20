@@ -15,28 +15,36 @@ import matplotlib.pyplot as plt
 import imageio
 import seaborn as sns
 
-GRAPH_TYPE = ['fully_connected_network']#,
-                # 'fully_disconnected_network',
-                # 'scale_free_network',
-                # 'random_network',
-                # 'watts_strogatz_network']
+GRAPH_FILE_NAMES = ['fully_connected_network',
+                'fully_disconnected_network',
+                'scale_free_network',
+                'random_network',
+                'watts_strogatz_network']
+
+GRAPH_PRETY_NAMES = ['Fully Connected Network',
+                     'Fully Disconnected Network',
+                     'Scale Free Network',
+                     'Random Network',
+                     'Watts-Strogatz Network']
 
 AGENT_RESPONSES_REP = 'output/agent_responses/'
-OUTPUT_ANALYSE_REP = "output/analysis/"
+OUTPUT_ANALYSIS_REP = "output/analysis/"
 
-class Analyse:
+class Analysis:
     """Meta data for a given graph and size"""
 
     def __init__(self, csv_path: str) -> None:
         # Type is a int, it is easier to compare
-        self.type = file_name = GRAPH_TYPE.index(csv_path.split('/')[2])
+        self.type = file_name = GRAPH_FILE_NAMES.index(csv_path.split('/')[2])
         self.num_agents = int(csv_path.split('/')[3].split('.')[0])
         # The agent output is parsed and only the parsed file path is saved.
-        self.path = parse_output_mmlu(csv_path, GRAPH_TYPE[self.type], self.num_agents)
+        self.path = parse_output_mmlu(csv_path, GRAPH_FILE_NAMES[self.type], self.num_agents)
         self.__accuracy = None
         self.__consensusPerQuestion = None
         self.__consensus = None
         self.__consensusSimpson = None
+        self.__consensusPerQuestionWrongRes = None
+        self.__consensusSimpsonWrongRes = None
 
     def setAccuracy(self) -> None:
         self.__accuracy = calculate_accuracy(self.path)
@@ -49,11 +57,22 @@ class Analyse:
 
     def setConsensusSimpson(self) -> None:
         '''
-            The probability that two different agents randomly selected heve the
+            The probability that two different agents randomly selected have the
         same responses.
         '''
         self.__consensusSimpson = self.getConsensusPerQuestion()['simpson'].mean()
-        
+
+    def setConsensusPerQuestionWrongRes(self) -> None:
+        wrong_responses = filter_wrong_network_responses(self.path,
+                                                        GRAPH_FILE_NAMES[self.type],
+                                                        self.num_agents)
+        self.__consensusPerQuestionWrongRes = calculate_consensus_per_question(wrong_responses)
+
+    def setConsensusSimpsonWrongRes(self) -> None:
+        '''
+            Same as previously but only for the question on wich the network answer is wrong.
+        '''
+        self.__consensusSimpsonWrongRes = self.getConsensusPerQuestionWrongRes()['simpson'].mean()
 
     def getAccuracy(self) -> list[int]:
         # We check if it as already been computed
@@ -78,6 +97,16 @@ class Analyse:
         if self.__consensusSimpson is None:
             self.setConsensusSimpson()
         return self.__consensusSimpson        
+
+    def getConsensusPerQuestionWrongRes(self) -> pd.DataFrame:
+        if self.__consensusPerQuestionWrongRes is None:
+            self.setConsensusPerQuestionWrongRes()
+        return self.__consensusPerQuestionWrongRes
+    
+    def getConsensusSimpsonWrongRes(self) -> float:
+        if self.__consensusSimpsonWrongRes is None:
+            self.setConsensusSimpsonWrongRes()
+        return self.__consensusSimpsonWrongRes
 
     def ParseOpinionEvolution(self) -> pd.DataFrame :
         return find_evolutions(self.path)
@@ -135,29 +164,42 @@ def created_figs(parsed_file_path: str, network_type: str) -> None:
         for image_path in images:
             os.remove(image_path)
 
-# Function to calculate the accuracy of group responses for each round
-def calculate_accuracy(parsed_file_path: str) -> pd.DataFrame:
+def calculate_accuracy(file_path: str) -> pd.DataFrame:
     # Read the CSV file
-    df = pd.read_csv(parsed_file_path, delimiter='|')
+    df = pd.read_csv(file_path, delimiter='|')
 
-    num_agent = df['agent_id'].unique().size
+    accuracies = []
 
-    # We select only the correct responses and remove unecessary columns 
-    accuracy_per_round = df[['round', 'question_number', 'correct']].query('correct')
-    accuracy_per_round.to_csv(Path(f'{OUTPUT_ANALYSE_REP}step1.csv', index=False))
+    # Iterate through each round
+    for round_number in df['round'].unique():
+        round_df = df[df['round'] == round_number]
 
-    # We count correct answers for each line
-    accuracy_per_round = accuracy_per_round.groupby(['round', 'question_number']).count().reset_index()
-    accuracy_per_round.to_csv(Path(f'{OUTPUT_ANALYSE_REP}step2.csv', index=False))
+        correct_answers = 0
+        total_questions = len(round_df['question_number'].unique())
 
-    # The network gives the right answer to a question if count > num agent / 2 
-    accuracy_per_round['accuracy'] = accuracy_per_round['correct'].apply(lambda correct_num : 1 if correct_num > num_agent / 2 else 0)
+        for question_number in round_df['question_number'].unique():
+            question_df = round_df[round_df['question_number'] == question_number]
 
-    # Then we compute the average accuracy (for each round)
-    accuracy_per_round = accuracy_per_round[['round', 'accuracy']].groupby('round').mean()
+            # Find the most common response
+            most_common_response = Counter(question_df['parsed_response']).most_common(1)[0][0]
 
-    accuracy_per_round.to_csv(Path(f'{OUTPUT_ANALYSE_REP}step3.csv', index=False))
-    return accuracy_per_round
+            # Get the correct response (assuming it's the same for all rows of the same question)
+            correct_answer = question_df['correct_response'].unique()
+            assert(len(correct_answer)) # raise exception if all rows doesn't have the same correct answer
+            correct_response = correct_answer[0]
+
+            # Check if the most common response matches the correct response
+            if most_common_response == correct_response:
+                correct_answers += 1
+
+        # Calculate the accuracy for the round
+        accuracy_percentage = (correct_answers / total_questions) * 100
+        accuracies.append({'round': round_number, 'accuracy': accuracy_percentage})
+
+    # Convert the list of accuracies into a DataFrame
+    accuracy_df = pd.DataFrame(accuracies)
+
+    return accuracy_df
 
 def find_evolutions(parsed_file_path) -> pd.DataFrame :
     opinion_evol_list = [] # list to be turned into a dataframe
@@ -175,13 +217,13 @@ def find_evolutions(parsed_file_path) -> pd.DataFrame :
                 # with 0 wrong answer and 1 the good one (01 = from 1 to 0).
                 type = None
                 if bool(prev['correct'].values[0]):
-                    type = "1"
+                    type = "C -> "
                 else :
-                    type = "0"
+                    type = "I -> "
                 if bool(next['correct'].values[0]):
-                    type = type+"1"
+                    type = type+"C"
                 else :
-                    type = type+"0"
+                    type = type+"I"
                 opinion_evol_list.append([id, str(round), type])
     return pd.DataFrame(columns = ['agent_id', 'round', 'type'], data=opinion_evol_list)   
 
@@ -213,7 +255,7 @@ def calculate_consensus_per_question(parsed_file_path: str) -> pd.DataFrame :
 def parse_output_mmlu(csv_file: str, res_file_name : str, num_agents: int) -> str:
     """
         Parse agent response to analyse which answer is correct and which is not.
-    Save the result in OUTPUT_ANALYSE_REP, adding '_parsed' res_file_name.
+    Save the result in OUTPUT_ANALYSIS_REP, adding '_parsed' res_file_name.
     Return the path of the result file.
     """
     df = pd.read_csv(csv_file, delimiter='|')
@@ -222,11 +264,16 @@ def parse_output_mmlu(csv_file: str, res_file_name : str, num_agents: int) -> st
     df['parsed_response'] = df['response'].apply(parse_response_mmlu)
     df['correct'] = df['parsed_response'] == df['correct_response']
 
+    # If parsed response is not in the possible answers, we set parsed response as None
+    df['parsed_response'] = df['parsed_response'].apply(lambda string: 
+                                                        string if string in ['A', 'B', 'C', 'D'] 
+                                                        else 'None')
+
     # removing useless columns
-    df = df[['agent_id', 'round', 'question_number', 'parsed_response','correct']]
+    df = df[['agent_id', 'round', 'question_number', 'parsed_response', 'correct_response', 'correct']]
 
     # saving data, creating the directory if it doesnot exist
-    save_path = f'{OUTPUT_ANALYSE_REP}parsed_agent_responses/'
+    save_path = f'{OUTPUT_ANALYSIS_REP}parsed_agent_responses/'
     Path(save_path).mkdir(parents=True, exist_ok=True)
 
     save_path = f'{save_path}{res_file_name}_{num_agents}_parsed.csv'
@@ -234,24 +281,56 @@ def parse_output_mmlu(csv_file: str, res_file_name : str, num_agents: int) -> st
 
     return save_path
 
+def filter_wrong_network_responses(parsed_reponses_csv: str, network_name: str, number_agent: int) -> str:
+    """
+        Filter the parsed response to keep only the data related to question where the network as globally
+    given a wrong answer.
+        The programm save the result as a .csv file and return the path. 
+    """
+    df =  pd.read_csv(parsed_reponses_csv, delimiter = '|')
+    df.to_csv(Path(f'{OUTPUT_ANALYSIS_REP}parsed_agent_wrong_responses/step0.csv'), index=False)
+
+    # We count the number of responses of each type (A, B, C, D, None) for each question
+    network_wrong_responses = df.query('round == 2').groupby(['question_number', 
+                                                                'parsed_response', 
+                                                                'correct'],
+                                                                as_index = False).size()
+
+    # We select the network answer at each question by selecting the most given answer at each question.
+    network_wrong_responses = network_wrong_responses.sort_values(['question_number', 
+                                                                'size'],
+                                                                ascending = False)
+    network_wrong_responses = network_wrong_responses.groupby(['question_number'],
+                                                                   as_index= False).nth(0)
+
+    # We only keep the wrong responses
+    network_wrong_responses = network_wrong_responses.query('not correct')['question_number']
+
+    # By merging with the original data set, we only keep network wrong answers related data.
+    res = pd.merge(df, network_wrong_responses, on="question_number")
+
+    res_path = f'{OUTPUT_ANALYSIS_REP}parsed_agent_wrong_responses/{network_name}_{number_agent}.csv'
+    res.to_csv(Path(res_path), index=False, mode='w', sep='|')
+    return res_path
+
 if __name__ == "__main__":
     
     # Create the new directory structure if it does not exist
-    Path(OUTPUT_ANALYSE_REP).mkdir(parents=True, exist_ok=True)
+    Path(OUTPUT_ANALYSIS_REP).mkdir(parents=True, exist_ok=True)
 
     # Specify the path to your CSV files
     csv_files = glob.glob(f'{AGENT_RESPONSES_REP}**/*.csv', recursive=True)
 
-    # analyses[i] is a list wich contain analyses relative to graphs of type i
-    analyses = [None] * len(GRAPH_TYPE)
+    # analysis[i] is a list wich contain analysis relative to graphs of type i
+    analyses_list = [None] * len(GRAPH_FILE_NAMES)
 
     # reset result files and write headers
-    f = open(f'{OUTPUT_ANALYSE_REP}accuracy.csv', 'w', newline='')
+    f = open(f'{OUTPUT_ANALYSIS_REP}accuracy.csv', 'w', newline='')
     writer = csv.writer(f)
-    writer.writerow(['graph_type', 'size', 'accuracy round 1', 'accuracy round 2', 'accuracy round 3'])
+    writer.writerow(['round', 'accuracy', 'size', 'graph_type'])
     f.close()
 
-    f = open(f'{OUTPUT_ANALYSE_REP}consensus.csv', 'w', newline='')
+    f = open(f'{OUTPUT_ANALYSIS_REP}consensus.csv', 'w', newline='')
     writer = csv.writer(f)
     writer.writerow(['graph_type', 'size', 'consensus', 'consensus_simpson'])
     f.close()
@@ -259,147 +338,173 @@ if __name__ == "__main__":
     # Loop on each csv file
     for file in csv_files:
         print(file)
-        current_analyse = Analyse(file) 
+        current_analysis = Analysis(file) 
         
         # Create figs for each simulation
-        # created_figs(file, GRAPH_TYPE[current_analyse.type])
+        # created_figs(file, GRAPH_FILE_NAMES[current_analysis.type])
 
         # Calculate the accuracy of group responses
-        accuracy = current_analyse.getAccuracy()
+        accuracy = current_analysis.getAccuracy()
+        accuracy['size'] = [current_analysis.num_agents] * accuracy.shape[0]
+        accuracy['graph_type'] = [f'{GRAPH_PRETY_NAMES[current_analysis.type]}'] * accuracy.shape[0]
 
         # save accuracy
-        with open(f'{OUTPUT_ANALYSE_REP}accuracy.csv', 'a', newline='') as result_file:
-            writer = csv.writer(result_file)
-            writer.writerow([GRAPH_TYPE[current_analyse.type],
-                             current_analyse.num_agents,
-                             accuracy.query('round == 0').values[0][0],
-                             accuracy.query('round == 1').values[0][0],
-                             accuracy.query('round == 2').values[0][0]])
-            
-        # Calculate the consensus for this graph
-        consensus = current_analyse.getConsensusPerQuestion()
+        accuracy.to_csv(f'{OUTPUT_ANALYSIS_REP}accuracy.csv', mode='a', sep=',', index=False, header=False)
 
-        # create the result path or reset if it already exists
-        result_file_path = f'{OUTPUT_ANALYSE_REP}consensus/{GRAPH_TYPE[current_analyse.type]}/'
+        # Calculate the consensus for this graph
+        consensus = current_analysis.getConsensusPerQuestion()
+
+        # create the result path or reset it if it already exists
+        result_file_path = f'{OUTPUT_ANALYSIS_REP}consensus/{GRAPH_FILE_NAMES[current_analysis.type]}/'
         Path(result_file_path).mkdir(parents=True, exist_ok=True)
 
         # Draw plots and save them
-        plt.figure(figsize=(16, 9))
-        sns.displot(consensus, x="consensus")
-        plt.title(f"average consensus per question for {current_analyse.num_agents} agents\nin {GRAPH_TYPE[current_analyse.type]}")
-        plt.xlabel("consensus (proportion of correct answers)")
-        plt.ylabel("frequency (%)")
-        plt.savefig(f'{result_file_path}consensus_{current_analyse.num_agents}.png')
+        # Consensus        
+        g = sns.displot(consensus, x="consensus")
+        # g.set_theme(rc={'figure.figsize':(11.7,8.27)})
+        g.set(title=f"Average Consensus per Question for {current_analysis.num_agents} Agents\nin {GRAPH_PRETY_NAMES[current_analysis.type]}")
+        g.set_axis_labels("Consensus (proportion of correct answers)", "Frequency (%)")
+        plt.savefig(f'{result_file_path}consensus_{current_analysis.num_agents}.png')
         plt.close('all')
 
+        # Simpson consensus
         plt.figure(figsize=(16, 9))
         sns.displot(consensus, x="simpson")
-        plt.title(f"average simpson consensus per question for {current_analyse.num_agents} agents\nin {GRAPH_TYPE[current_analyse.type]}")
-        plt.xlabel("simpson probability")
-        plt.ylabel("frequency (%)")
-        plt.savefig(f'{result_file_path}simpson_{current_analyse.num_agents}.png')
+        plt.title(f"Average Simpson Consensus per Question for {current_analysis.num_agents} Agents\nin {GRAPH_PRETY_NAMES[current_analysis.type]}")
+        plt.xlabel("Simpson probability")
+        plt.ylabel("Frequency (%)")
+        plt.savefig(f'{result_file_path}simpson_{current_analysis.num_agents}.png')
         plt.close('all')
 
         # save the csv file
-        consensus.to_csv(f'{result_file_path}{current_analyse.num_agents}.csv', mode='w', sep=',', index=False)
+        consensus.to_csv(f'{result_file_path}{current_analysis.num_agents}.csv', mode='w', sep=',', index=False)
 
         # save the mean for both metrics
-        with open(f'{OUTPUT_ANALYSE_REP}consensus.csv', 'a', newline='') as result_file:
+        with open(f'{OUTPUT_ANALYSIS_REP}consensus.csv', 'a', newline='') as result_file:
             writer = csv.writer(result_file)
-            writer.writerow([GRAPH_TYPE[current_analyse.type],
-                             current_analyse.num_agents,
-                             current_analyse.getConsensus(),
-                             current_analyse.getConsensusSimpson()])
+            writer.writerow([GRAPH_FILE_NAMES[current_analysis.type],
+                             current_analysis.num_agents,
+                             current_analysis.getConsensus(),
+                             current_analysis.getConsensusSimpson()])
 
         # # Parse the opinion evolution list and display it
-        # opinion_evol = current_analyse.ParseOpinionEvolution()
-        # plt.figure()
-        # sns.histplot(data=opinion_evol, x="round", hue="type", multiple="dodge", shrink=.8, stat="count")
-        # plt.grid()
-        # plt.xlabel("round number")
-        # plt.ylabel("number of agents")
-        # plt.title(f"opinion changes during the round for {current_analyse.num_agents} agents \nin a {GRAPH_TYPE[current_analyse.type]}")
+        opinion_evol = current_analysis.ParseOpinionEvolution()
+
+        custom_palette = {"I -> I": "orange", "C -> C": "blue", "I -> C": "green", "C -> I" : "red"}
+        hue_order = ["C -> C", "I -> I", "I -> C", "C -> I"]
+
+        plt.figure()
+        sns.histplot(data=opinion_evol,
+                    x="round",
+                    hue="type",
+                    hue_order=hue_order,
+                    multiple="dodge",
+                    shrink=.8,
+                    stat="density",
+                    palette=custom_palette).set(title=f"Opinion Changes during the Round for {current_analysis.num_agents} Agents \nin a {GRAPH_PRETY_NAMES[current_analysis.type]}")
+        plt.xlabel("round number")
+        plt.ylabel("number of agents")
 
         # # Save the fig
-        # file_path = f'{OUTPUT_ANALYSE_REP}/opinion_changes/{GRAPH_TYPE[current_analyse.type]}/'
-        # Path(file_path).mkdir(parents=True, exist_ok=True)
-        # plt.savefig(Path(f'{file_path}/{current_analyse.num_agents}.png'))
-        # plt.close('all')
+        file_path = f'{OUTPUT_ANALYSIS_REP}/opinion_changes/{GRAPH_FILE_NAMES[current_analysis.type]}/'
+        Path(file_path).mkdir(parents=True, exist_ok=True)
+        plt.savefig(Path(f'{file_path}/{current_analysis.num_agents}.png'))
+        plt.close('all')
 
-        # add analyse to the list for later
-        if not (analyses[current_analyse.type]):
-            analyses[current_analyse.type] = []
-        analyses[current_analyse.type].append(current_analyse)
+        # add analysis to the list for later
+        if not (analyses_list[current_analysis.type]):
+            analyses_list[current_analysis.type] = []
+        analyses_list[current_analysis.type].append(current_analysis)
 
     # accuracy comparison plot
     # number of agent vs accuracy
     plt.figure(figsize=(16, 9))
-    for graph_type in range(len(analyses)):
+    for graph_type in range(len(analyses_list)):
         curve = []
-        for analyse in analyses[graph_type]:
-            curve.append( (analyse.num_agents, analyse.getAccuracy().query('round == 2').values[0][0]) )
+        for analysis in analyses_list[graph_type]:
+            curve.append( (analysis.num_agents, analysis.getAccuracy().query('round == 2').values[0][1]) )
         curve.sort(key = lambda point: point[0])
         X = [point[0] for point in curve]
         Y = [point[1] for point in curve]
-        plt.plot(X, Y, label=GRAPH_TYPE[graph_type])
-    plt.title("accuracy vs graph size and graph type")
+        plt.plot(X, Y, label=GRAPH_PRETY_NAMES[graph_type])
+    plt.title("Accuracy vs Graph Size and Graph Type")
     plt.legend()
     plt.xlabel('Number of agents')
-    plt.ylabel('accuracy (%)')
+    plt.ylabel('Accuracy (%)')
     plt.grid(True)
-    plot_path = Path(OUTPUT_ANALYSE_REP + 'accuracy_vs_number_of_agents.png')
+    plot_path = Path(OUTPUT_ANALYSIS_REP + 'accuracy_vs_number_of_agents.png')
     plt.savefig(plot_path)
     plt.close('all')
 
-    # round vs accuracy
-    plt.figure(figsize=(16, 9))
-    for graph_type in range(len(analyses)):
-        for analyse in analyses[graph_type]:
-            Y = analyse.getAccuracy()
-            plt.plot(['1', '2', '3'], Y, label=f'{GRAPH_TYPE[graph_type]}_{analyse.num_agents}')
-    plt.title("accuracy vs round number and graph type")
-    plt.legend()
-    plt.xlabel('Round number')
-    plt.ylabel('accuracy (%)')
-    plt.grid(True)
-    plot_path = Path(OUTPUT_ANALYSE_REP + 'accuracy_vs_round.png')
-    plt.savefig(plot_path)
-    plt.close('all')
+    # Accuracy vs Round
+    plot_path = f'{OUTPUT_ANALYSIS_REP}accuracy_vs_round/'
+    Path(plot_path).mkdir(parents=True, exist_ok=True)
 
-    # consensus vs graph type
+    df_accuracy = pd.read_csv(Path(f'{OUTPUT_ANALYSIS_REP}accuracy.csv'), delimiter=',')
+    for size in df_accuracy['size'].unique():
+        plt.figure(figsize=(16, 9))
+        data = df_accuracy.query(f'size == {size}')
+        sns.lineplot(data = data, x = 'round', y = 'accuracy', hue = 'graph_type')
+        plt.title(f"Accuracy vs Round Number and Graph Type for {size} agents")
+        plt.xlabel('Round number')
+        plt.ylabel('Accuracy (%)')
+        plt.grid(True)
+        plt.savefig(f'{plot_path}/{size}.png')
+        plt.close('all')
+
+    # consensus vs graph type    
     plt.figure(figsize=(16, 9))
-    for graph_type in range(len(analyses)):
+    for graph_type in range(len(analyses_list)):
         curve = []
-        for analyse in analyses[graph_type]:
-            curve.append([analyse.num_agents, analyse.getConsensus()])
+        for analysis in analyses_list[graph_type]:
+            curve.append([analysis.num_agents, analysis.getConsensus()])
         curve.sort(key = lambda point: point[0])
         X = [point[0] for point in curve]
         Y = [point[1] for point in curve]
-        plt.plot(X, Y, label = GRAPH_TYPE[graph_type])
-    plt.title("consensus vs agent graph size and graph type")
+        plt.plot(X, Y, label = GRAPH_PRETY_NAMES[graph_type])
+    plt.title("Consensus vs Agent Graph Size and Graph Type")
     plt.legend()
-    plt.xlabel('number of agents (graph size)')
-    plt.ylabel('consensus (%)')
+    plt.xlabel('Number of agents (graph size)')
+    plt.ylabel('Consensus (%)')
     plt.grid(True)
-    plot_path = Path(OUTPUT_ANALYSE_REP + 'consensus_vs_network.png')
+    plot_path = Path(OUTPUT_ANALYSIS_REP + 'consensus_vs_network.png')
     plt.savefig(plot_path)
     plt.close('all')
 
     # simpson consensus vs graph type
     plt.figure(figsize=(16, 9))
-    for graph_type in range(len(analyses)):
+    for graph_type in range(len(analyses_list)):
         curve = []
-        for analyse in analyses[graph_type]:
-            curve.append([analyse.num_agents, analyse.getConsensusSimpson()])
+        for analysis in analyses_list[graph_type]:
+            curve.append([analysis.num_agents, analysis.getConsensusSimpson()])
         curve.sort(key = lambda point: point[0])
         X = [point[0] for point in curve]
         Y = [point[1] for point in curve]
-        plt.plot(X, Y, label = GRAPH_TYPE[graph_type])
-    plt.title("simpson consensus vs agent graph size and graph type")
+        plt.plot(X, Y, label = GRAPH_PRETY_NAMES[graph_type])
+    plt.title("Simpson Consensus vs Agent Graph Size and Graph Type")
     plt.legend()
-    plt.xlabel('number of agents (graph size)')
-    plt.ylabel('consensus (%)')
+    plt.xlabel('Number of agents (graph size)')
+    plt.ylabel('Consensus (%)')
     plt.grid(True)
-    plot_path = Path(OUTPUT_ANALYSE_REP + 'simpson_consensus_vs_network.png')
+    plot_path = Path(OUTPUT_ANALYSIS_REP + 'simpson_consensus_vs_network.png')
     plt.savefig(plot_path)
     plt.close('all')
+
+    # simpson consensus vs graph type for wrong answers
+    plt.figure(figsize=(16, 9))
+    for graph_type in range(len(analyses_list)):
+        curve = []
+        for analysis in analyses_list[graph_type]:
+            curve.append([analysis.num_agents, analysis.getConsensusSimpsonWrongRes()])
+        curve.sort(key = lambda point: point[0])
+        X = [point[0] for point in curve]
+        Y = [point[1] for point in curve]
+        plt.plot(X, Y, label = GRAPH_PRETY_NAMES[graph_type])
+    plt.title("Simpson Consensus vs Agent Graph Size and Graph Type For Wrong Answers")
+    plt.legend()
+    plt.xlabel('Number of agents (graph size)')
+    plt.ylabel('Consensus (%)')
+    plt.grid(True)
+    plot_path = Path(OUTPUT_ANALYSIS_REP + 'simpson_consensus_vs_network_wrong_responses.png')
+    plt.savefig(plot_path)
+    plt.close('all') 
