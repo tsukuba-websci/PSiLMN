@@ -43,42 +43,42 @@ def main():
     f.close()
 
     # Loop on each csv file
-    # for file in csv_files:
-    #     print(file)
-    #     # We analyse simulations one by one :
-    #     res_dir, graph_type, num_agent = network_analysis.analyse_simu(agent_response= Path(file), 
-    #                                                                     analyse_dir= Path(OUTPUT_ANALYSIS_REP), 
-    #                                                                     figs = False)
+    for file in csv_files:
+        print(file)
+        # We analyse simulations one by one :
+        res_dir, graph_type, num_agent = network_analysis.analyse_simu(agent_response= Path(file), 
+                                                                        analyse_dir= Path(OUTPUT_ANALYSIS_REP), 
+                                                                        figs = False)
         
-    #     # Then we save results for inter-graph analysis
-    #     # Get the accuracy of group responses
-    #     accuracy = pd.read_csv(res_dir / 'accuracy_per_round.csv')   
+        # Then we save results for inter-graph analysis
+        # Get the accuracy of group responses
+        accuracy = pd.read_csv(res_dir / 'accuracy_per_round.csv')   
 
-    #     # save accuracy
-    #     accuracy['size'] = num_agent
-    #     accuracy['graph_type'] = f'{GRAPH_PRETY_NAMES[graph_type]}'
-    #     accuracy[['round', 'accuracy', 'size', 'graph_type']].to_csv(f'{OUTPUT_ANALYSIS_REP}accuracy.csv', 
-    #                                                                 mode='a', 
-    #                                                                 sep=',', 
-    #                                                                 index=False, 
-    #                                                                 header=False)
+        # save accuracy
+        accuracy['size'] = num_agent
+        accuracy['graph_type'] = f'{GRAPH_PRETY_NAMES[graph_type]}'
+        accuracy[['round', 'accuracy', 'size', 'graph_type']].to_csv(f'{OUTPUT_ANALYSIS_REP}accuracy.csv', 
+                                                                    mode='a', 
+                                                                    sep=',', 
+                                                                    index=False, 
+                                                                    header=False)
 
-    #     # Get the consensus for this graph (normal and wrong answers only consensus)
-    #     consensus = pd.read_csv(res_dir / 'consensus.csv')
-    #     consensus = consensus[['consensus', 'simpson']].mean()
+        # Get the consensus for this graph (normal and wrong answers only consensus)
+        consensus = pd.read_csv(res_dir / 'consensus.csv')
+        consensus = consensus[['consensus', 'simpson']].mean()
 
-    #     consensus_w = pd.read_csv(res_dir / 'consensus_wrong_response.csv')
-    #     consensus_w = consensus_w[['simpson']].mean()
+        consensus_w = pd.read_csv(res_dir / 'consensus_wrong_response.csv')
+        consensus_w = consensus_w[['simpson']].mean()
 
-    #     # save consensus
-    #     f = open(f'{OUTPUT_ANALYSIS_REP}consensus_comparison.csv', 'a', newline='')
-    #     writer = csv.writer(f)
-    #     writer.writerow([GRAPH_PRETY_NAMES[graph_type],
-    #                         num_agent,
-    #                         consensus['consensus'],
-    #                         consensus['simpson'],
-    #                         consensus_w['simpson']])
-    #     f.close()
+        # save consensus
+        f = open(f'{OUTPUT_ANALYSIS_REP}consensus_comparison.csv', 'a', newline='')
+        writer = csv.writer(f)
+        writer.writerow([GRAPH_PRETY_NAMES[graph_type],
+                            num_agent,
+                            consensus['consensus'],
+                            consensus['simpson'],
+                            consensus_w['simpson']])
+        f.close()
 
     ## Graph comparison analyses
     # Accuracy vs round for each size
