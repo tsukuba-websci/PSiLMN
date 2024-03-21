@@ -5,3 +5,5 @@
 *.log
 *.csv
 *.gif
+/output
+temp.py
