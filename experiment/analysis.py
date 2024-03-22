@@ -129,7 +129,7 @@ if __name__ == "__main__":
         # Now process each CSV file and append its results
         for file in csv_files:
             # Temporarily commented out for context
-            # created_figs(file)
+            created_figs(file)
 
             file_name = os.path.basename(file).split('.')[0]
             network_type = file.split('/')[3]

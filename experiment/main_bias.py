@@ -4,6 +4,7 @@ from pathlib import Path
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 from lib.agent import Agent, fake_name
 from datasets import load_dataset
 from typing import Dict, Tuple
@@ -95,12 +96,10 @@ def load_agents(network_type: str, n: int, model: str, bias: str) -> Tuple[nx.Gr
 
         return graph, agents_dict
 
-async def get_response(agent: Agent, input: str) -> str:
-
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), reraise=True)
+async def get_response(agent, input):
     if agent.neighbor_response and agent.bias == "None":
-        input = f"{input}\nBased on your previous response and the solutions of other the agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_response}"
-
-    print(f"INPUT: {input}")
+        input = f"{input}\nBased on your previous response and the solutions of other agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_response}"
 
     response = await agent.ainterview(input)
     return response.replace("|", " ")

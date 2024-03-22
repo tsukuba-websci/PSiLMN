@@ -1,4 +1,5 @@
 import re
+from tenacity import retry, stop_after_attempt, wait_random_exponential, retry_if_exception_type
 from typing import Any, Dict, List, Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -67,6 +68,10 @@ class Agent:
         
         return response
     
+    @retry(wait=wait_random_exponential(min=1, max=60),
+        stop=stop_after_attempt(6),
+        retry=retry_if_exception_type(Exception),  # Customize based on the exceptions you expect
+        reraise=True)
     async def ainterview(self, question: str, correspondee: str = "Interviewer") -> str:
         """Generate a response to a given prompt."""
         prompt = PromptTemplate.from_template(
