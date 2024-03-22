@@ -41,7 +41,7 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
     num_questions = len(dataset)
 
     for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
-        for num_agents in [10,25,50,100]:
+        for num_agents in [5,10,25,50,100]:
 
             agent_output_file = Path(f"output/unbiased/agent_responses/{network_type}/{num_agents}.csv")
             agent_output_file.parent.mkdir(parents=True, exist_ok=True)
