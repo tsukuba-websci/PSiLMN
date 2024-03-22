@@ -35,13 +35,19 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
         token_buffer = 1000
         max_tokens = 16385 - token_buffer # max tokens for gpt-3.5-turbo
 
+    elif "mistral" in model:
+        from transformers import AutoTokenizer
+        encoding = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1")
+        token_buffer = 1000
+        max_tokens = 8192 - token_buffer
+
     dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test").to_pandas()
 
     dataset = dataset.head(100)
     num_questions = len(dataset)
 
-    for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
-        for num_agents in [5,10,25,50,100]:
+    for network_type in ["scale_free_network"]:
+        for num_agents in [5,10,25]:
 
             agent_output_file = Path(f"output/unbiased/agent_responses/{network_type}/{num_agents}.csv")
             agent_output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -164,8 +170,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model = args.model
 
+    start_time = time.time()
+
     # test mmlu
     asyncio.run(test_mmlu(model=model))
+
+    end_time = time.time()
+
+    print(f"Time taken: {(end_time - start_time) / 60} minutes")
 
     # # run post process on csv files
     csv_files = glob.glob('output/unbiased/agent_responses/**/*.csv', recursive=True)

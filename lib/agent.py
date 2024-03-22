@@ -19,7 +19,7 @@ class Agent:
     def __init__(self, id: str, name: str, bias: str = "None", personality: str = "Not Applicable", model: str = "mistral") -> None:
 
         if "mistral" in model:
-            llm = Ollama(model="mistral:instruct")
+            llm = Ollama(model="mistral")
         elif model == "phi":
             llm = Ollama(model="phi")
         elif "gpt-3.5-turbo" in model:
