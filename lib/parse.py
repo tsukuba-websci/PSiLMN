@@ -37,10 +37,10 @@ def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path) -> pd.DataFr
     df['parsed_response'] = df['response'].apply(parse_response_mmlu)
     df['correct'] = df['parsed_response'] == df['correct_response']
 
-    # If parsed response is not in the possible answers, we set parsed response as None
+    # If parsed response is not in the possible answers, we set parsed response as X
     df['parsed_response'] = df['parsed_response'].apply(lambda string: 
                                                         string if string in ['A', 'B', 'C', 'D'] 
-                                                        else 'None')
+                                                        else 'X')
 
     # Remove useless columns
     df = df[['agent_id', 'round', 'question_number', 'parsed_response', 'correct_response', 'correct']]

@@ -29,7 +29,7 @@ def calculate_accuracy(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
 
             # Get the correct response (assuming it's the same for all rows of the same question)
             correct_answer = question_df['correct_response'].unique()
-            assert(len(correct_answer)) # raise exception if all rows doesn't have the same correct answer
+            assert(len(correct_answer)==1) # raise exception if all rows doesn't have the same correct answer
             correct_response = correct_answer[0]
 
             # Check if the most common response matches the correct response
