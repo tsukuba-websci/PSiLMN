@@ -40,7 +40,7 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
     dataset = dataset.head(100)
     num_questions = len(dataset)
 
-    for network_type in ["fully_disconnected_network"]:
+    for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
         for num_agents in [10,25,50,100]:
 
             agent_output_file = Path(f"output/unbiased/agent_responses/{network_type}/{num_agents}.csv")
@@ -63,7 +63,7 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
 
                 await ask_agents_and_write_responses(agents, agent_input, agent_output_file, question_number, correct_response, rounds, encoding, max_tokens, graph)
 
-                time.sleep(10)
+                time.sleep(120)
 
 def load_agents(network_type: str, n: int, model: str) -> Tuple[nx.Graph, Dict[int, Agent]]:
     """
