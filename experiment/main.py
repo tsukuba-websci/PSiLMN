@@ -166,7 +166,7 @@ def make_single_line(filename: str):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("model", type=str, choices=['gpt-3.5-turbo'], default='gpt-3.5-turbo', help="The model to run the experiment with.")
+    parser.add_argument("model", type=str, choices=['gpt-3.5-turbo', 'mistral'], default='gpt-3.5-turbo', help="The model to run the experiment with.")
     args = parser.parse_args()
     model = args.model
 
