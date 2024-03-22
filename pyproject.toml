@@ -21,6 +21,7 @@ langchain-openai = "^0.0.8"
 imageio = "^2.34.0"
 lorem-text = "^2.1"
 aiofiles = "^23.2.1"
+tenacity = "^8.2.3"
 
 
 [build-system]

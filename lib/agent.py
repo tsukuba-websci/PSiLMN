@@ -1,4 +1,5 @@
 import re
+from tenacity import retry, stop_after_attempt, wait_random_exponential, retry_if_exception_type
 from typing import Any, Dict, List, Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
@@ -15,7 +16,7 @@ dotenv.load_dotenv("../.env")
 class Agent:
     """Generative Agent"""
 
-    def __init__(self, id: str, name: str, personality: str = "Not Applicable", model: str = "mistral") -> None:
+    def __init__(self, id: str, name: str, bias: str = "None", personality: str = "Not Applicable", model: str = "mistral") -> None:
 
         if "mistral" in model:
             llm = Ollama(model="mistral:instruct")
@@ -36,9 +37,10 @@ class Agent:
         self.verbose = False
         self.status = f"Name: {name}, Personality: {personality}"
         self.response = ""
-        self.neighbor_resonse = ""
+        self.neighbor_response = ""
         self.llm = llm
         self.memory = Memory(model=model)
+        self.bias = bias 
 
     @staticmethod
     def _parse_list(text: str) -> List[str]:
@@ -66,6 +68,10 @@ class Agent:
         
         return response
     
+    @retry(wait=wait_random_exponential(min=1, max=60),
+        stop=stop_after_attempt(6),
+        retry=retry_if_exception_type(Exception),  # Customize based on the exceptions you expect
+        reraise=True)
     async def ainterview(self, question: str, correspondee: str = "Interviewer") -> str:
         """Generate a response to a given prompt."""
         prompt = PromptTemplate.from_template(

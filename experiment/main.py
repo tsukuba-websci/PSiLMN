@@ -4,6 +4,7 @@ from pathlib import Path
 root_dir = Path(__file__).parent.parent
 sys.path.append(str(root_dir))
 
+from tenacity import retry, stop_after_attempt, wait_random_exponential
 from lib.agent import Agent, fake_name
 from datasets import load_dataset
 from typing import Dict, Tuple
@@ -15,6 +16,7 @@ import aiofiles
 import asyncio
 import random
 import glob
+import time
 import os
 import re
 
@@ -30,7 +32,7 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
     # todo: allow for other models
     if "gpt-3.5-turbo" in model:
         encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
-        token_buffer = 500
+        token_buffer = 1000
         max_tokens = 16385 - token_buffer # max tokens for gpt-3.5-turbo
 
     dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test").to_pandas()
@@ -39,10 +41,9 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
     num_questions = len(dataset)
 
     for network_type in ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]:
-
         for num_agents in [5,10,25,50,100]:
 
-            agent_output_file = Path(f"output/agent_responses/{network_type}/{num_agents}.csv")
+            agent_output_file = Path(f"output/unbiased/agent_responses/{network_type}/{num_agents}.csv")
             agent_output_file.parent.mkdir(parents=True, exist_ok=True)
 
             # iterate through each of the questions in the mmul dataset
@@ -61,6 +62,8 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
                 graph, agents = load_agents(network_type, num_agents, model=model)
 
                 await ask_agents_and_write_responses(agents, agent_input, agent_output_file, question_number, correct_response, rounds, encoding, max_tokens, graph)
+
+                time.sleep(120)
 
 def load_agents(network_type: str, n: int, model: str) -> Tuple[nx.Graph, Dict[int, Agent]]:
     """
@@ -99,7 +102,11 @@ async def write_responses_to_csv(file_path: str, responses: list):
             # Write the formatted string to the file
             await file.write(csv_line)
 
-async def get_response(agent: Agent, input: str) -> str:
+@retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), reraise=True)
+async def get_response(agent, input):
+    if agent.neighbor_response and agent.bias == "None":
+        input = f"{input}\nBased on your previous response and the solutions of other agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_response}"
+
     response = await agent.ainterview(input)
     return response.replace("|", " ")
 
@@ -110,13 +117,13 @@ async def ask_agents_and_write_responses(agents, agent_input, agent_output_file,
 
         # Update each agent's response
         for agent, response in zip(agents.values(), responses):
-            agent.response = response
+            agents[agent.id].response = response
 
         # Gather neighbor responses for each agent
         for agent_id, agent in agents.items():
             # randomise the order of the neighbors
             neighbors = list(graph.neighbors(agent_id))
-            neighbors = random.shuffle(neighbors)
+            random.shuffle(neighbors) 
             neighbors_responses = [f"Agent {neighbor}: {agents[neighbor].response}" for neighbor in neighbors]
             neighbor_response = "\n".join(neighbors_responses)
 
@@ -125,6 +132,7 @@ async def ask_agents_and_write_responses(agents, agent_input, agent_output_file,
             neighbor_response_encoded = neighbor_response_encoded[:max_tokens]
             neighbor_response = encoding.decode(neighbor_response_encoded)
             agent.neighbor_response = neighbor_response
+            agents[agent_id].neighbor_response = neighbor_response
 
         # Write responses to CSV
         round_info = [[agent.id, round, question_number, f"{agent.response}", correct_response] for agent in agents.values()]
@@ -159,7 +167,7 @@ if __name__ == "__main__":
     # test mmlu
     asyncio.run(test_mmlu(model=model))
 
-    # run post process on csv files
+    # # run post process on csv files
     csv_files = glob.glob('output/unbiased/agent_responses/**/*.csv', recursive=True)
     for file in csv_files:
         make_single_line(file)
