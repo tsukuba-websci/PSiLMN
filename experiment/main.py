@@ -136,8 +136,13 @@ def make_single_line(filename: str):
         pattern = re.compile(r'(\d+\|\d+\|\d+\|)([^|]+?)(\|[ABCD])', re.DOTALL)
 
         def replace_newlines_and_quote(m):
-            response_text = m.group(2).replace("\n", " ").strip()
-            return f'{m.group(1)}"{response_text}"{m.group(3)}'
+            response_text = m.group(2).replace("\n", " ").replace('"', '').strip()
+            grouped = f'{m.group(1)}"{response_text}"{m.group(3)}'
+
+            # assert an even number of quotes
+            assert(grouped.count('"') % 2 == 0)
+
+            return grouped
 
         modified_content = re.sub(pattern, replace_newlines_and_quote, content)
 
@@ -155,7 +160,7 @@ if __name__ == "__main__":
     asyncio.run(test_mmlu(model=model))
 
     # run post process on csv files
-    csv_files = glob.glob('output/agent_responses/**/*.csv', recursive=True)
+    csv_files = glob.glob('output/unbiased/agent_responses/**/*.csv', recursive=True)
     for file in csv_files:
         make_single_line(file)
 
