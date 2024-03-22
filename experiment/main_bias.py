@@ -160,8 +160,13 @@ def make_single_line(filename: str):
         pattern = re.compile(r'(\d+\|\d+\|\d+\|)([^|]+?)(\|[ABCD])', re.DOTALL)
 
         def replace_newlines_and_quote(m):
-            response_text = m.group(2).replace("\n", " ").strip()
-            return f'{m.group(1)}"{response_text}"{m.group(3)}'
+            response_text = m.group(2).replace("\n", " ").replace('"', '').strip()
+            grouped = f'{m.group(1)}"{response_text}"{m.group(3)}'
+
+            # assert an even number of quotes
+            assert(grouped.count('"') % 2 == 0)
+
+            return grouped
 
         modified_content = re.sub(pattern, replace_newlines_and_quote, content)
 

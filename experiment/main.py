@@ -165,7 +165,7 @@ if __name__ == "__main__":
     model = args.model
 
     # test mmlu
-    # asyncio.run(test_mmlu(model=model))
+    asyncio.run(test_mmlu(model=model))
 
     # # run post process on csv files
     csv_files = glob.glob('output/unbiased/agent_responses/**/*.csv', recursive=True)
