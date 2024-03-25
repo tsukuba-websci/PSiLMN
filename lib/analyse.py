@@ -7,43 +7,31 @@ from collections import Counter
 
 from typing import Tuple
 
-def calculate_accuracy(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
+def get_network_responses(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
     '''
         Return a dataFrame containing the accuracy for each round. 
     '''
-    df = parsed_agent_response
-    accuracies = []
+    
+    df =  parsed_agent_response
+    
+    # We count the number of responses of each type (A, B, C, D, X) for each question
+    responses = df.groupby(['round',
+                            'question_number', 
+                            'parsed_response', 
+                            'correct'], 
+                            as_index = False).size()
 
-    # Iterate through each round
-    for round_number in df['round'].unique():
-        round_df = df[df['round'] == round_number]
+    # We select the network answer at each question by selecting the most given answer at each question.
+    responses = responses.sort_values(['round',
+                                     'question_number', 
+                                    'size'],
+                                    ascending = False)
+    return responses
 
-        correct_answers = 0
-        total_questions = len(round_df['question_number'].unique())
-
-        for question_number in round_df['question_number'].unique():
-            question_df = round_df[round_df['question_number'] == question_number]
-
-            # Find the most common response
-            most_common_response = Counter(question_df['parsed_response']).most_common(1)[0][0]
-
-            # Get the correct response (assuming it's the same for all rows of the same question)
-            correct_answer = question_df['correct_response'].unique()
-            assert(len(correct_answer)==1) # raise exception if all rows doesn't have the same correct answer
-            correct_response = correct_answer[0]
-
-            # Check if the most common response matches the correct response
-            if most_common_response == correct_response:
-                correct_answers += 1
-
-        # Calculate the accuracy for the round
-        accuracy_percentage = (correct_answers / total_questions) * 100
-        accuracies.append({'round': round_number, 'accuracy': accuracy_percentage})
-
-    # Convert the list of accuracies into a DataFrame
-    accuracy_df = pd.DataFrame(accuracies)
-
-    return accuracy_df
+    responses = responses.groupby(['round', 'question_number'],
+                                    as_index= False).nth(0)
+    
+    return responses[['round','question_number','parsed_response','correct']]
 
 def find_evolutions(parsed_agent_response : pd.DataFrame) -> pd.DataFrame :
     """

@@ -95,18 +95,21 @@ def opinion_changes(df_opinion_evol: pd.DataFrame,
 
 ### Cross simulation plot
 # This programms take a csv file rather than a panda dataFrame
-def accuracy_vs_agent_number(accuracy_path: Path,
+def accuracy_vs_agent_number(network_responses_path: Path,
                             res_dir_path: Path) -> None:
     '''
         Plot the accuracy comparison between graphs.
     The programm create a .png image.
     res_dir_path should lead to a repertory, not to a file.
     '''
-    accuracy_df = pd.read_csv(accuracy_path)
-    accuracy_df = accuracy_df.query('round == 2')
+    network_responses_df = pd.read_csv(network_responses_path)
+    network_responses_df = network_responses_df.query('round == 2')
 
     plt.figure(figsize=(16, 9))
-    sns.lineplot(data = accuracy_df, x='size', y='accuracy', hue='graph_type').set(title="Accuracy vs Graph Size and Graph Type")
+    sns.pointplot(data = network_responses_df, 
+                 x='size', y='correct',
+                 errorbar=("ci",80),
+                 hue='graph_type').set(title="Accuracy vs Graph Size and Graph Type")
     plt.legend()
     plt.xlabel('Number of agents')
     plt.ylabel('Accuracy (%)')
@@ -127,7 +130,7 @@ def accurracy_vs_round(df_accuracy: pd.DataFrame,
     '''
     plt.figure(figsize=(16, 9))
     data = df_accuracy.query(f'size == {number_agents}')
-    sns.lineplot(data = data, x = 'round', y = 'accuracy', hue = 'graph_type')
+    sns.lineplot(data = data, x = 'round', y = 'correct', hue = 'graph_type')
     plt.title(f"Accuracy vs Round Number and Graph Type for {number_agents} agents")
     plt.xlabel('Round number')
     plt.ylabel('Accuracy (%)')

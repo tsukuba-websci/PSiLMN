@@ -35,8 +35,8 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
 
     ### Analysis one by one :
     # Accuracy per round
-    accuracy_df = analyse.calculate_accuracy(agent_parsed_resp)
-    accuracy_df.to_csv(final_res_path / 'accuracy_per_round.csv', mode = 'w', index=False)
+    network_responses_df = analyse.get_network_responses(agent_parsed_resp)
+    network_responses_df.to_csv(final_res_path / 'network_responses.csv', mode = 'w', index=False)
 
     # Consensus and simpson consensus
     consensus_df = analyse.calculate_consensus_per_question(agent_parsed_resp)
