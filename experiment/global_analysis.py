@@ -16,8 +16,8 @@ import lib.parse as parse
 import lib.analyse as analyse
 import lib.visualize as visu
 
-AGENT_RESPONSES_REP = 'output/agent_responses/'
-OUTPUT_ANALYSIS_REP = "output/analysis/"
+AGENT_RESPONSES_REP = 'output/unbiased/agent_responses/'
+OUTPUT_ANALYSIS_REP = "output/unbiased/analysis/"
 
 GRAPH_PRETY_NAMES = {'fully_connected_network' : 'Fully Connected Network',
                      'fully_disconnected_network' : 'Fully Disconnected Network',
@@ -28,13 +28,10 @@ GRAPH_PRETY_NAMES = {'fully_connected_network' : 'Fully Connected Network',
 def main():
     csv_files = glob(f'{AGENT_RESPONSES_REP}**/*.csv', recursive=True)
 
-    Path(OUTPUT_ANALYSIS_REP).mkdir(parents=True, exist_ok=True)
-    # TODO : reset file if it does not already exists
-
     # reset result files and write headers
-    f = open(f'{OUTPUT_ANALYSIS_REP}accuracy.csv', 'w', newline='')
+    f = open(f'{OUTPUT_ANALYSIS_REP}network_responses.csv', 'w', newline='')
     writer = csv.writer(f)
-    writer.writerow(['round', 'accuracy', 'size', 'graph_type'])
+    writer.writerow(['graph_type', 'size', 'question_number', 'round', 'correct'])
     f.close()
 
     f = open(f'{OUTPUT_ANALYSIS_REP}consensus_comparison.csv', 'w', newline='')
@@ -52,16 +49,18 @@ def main():
         
         # Then we save results for inter-graph analysis
         # Get the accuracy of group responses
-        accuracy = pd.read_csv(res_dir / 'accuracy_per_round.csv')   
+        network_responses = pd.read_csv(res_dir / 'network_responses.csv')   
 
         # save accuracy
-        accuracy['size'] = num_agent
-        accuracy['graph_type'] = f'{GRAPH_PRETY_NAMES[graph_type]}'
-        accuracy[['round', 'accuracy', 'size', 'graph_type']].to_csv(f'{OUTPUT_ANALYSIS_REP}accuracy.csv', 
-                                                                    mode='a', 
-                                                                    sep=',', 
-                                                                    index=False, 
-                                                                    header=False)
+        network_responses['size'] = num_agent
+        network_responses['graph_type'] = f'{GRAPH_PRETY_NAMES[graph_type]}'
+        network_responses[['graph_type', 'size', 
+                           'question_number', 
+                           'round', 'correct']].to_csv(f'{OUTPUT_ANALYSIS_REP}network_responses.csv',
+                                                        mode='a', 
+                                                        sep=',', 
+                                                        index=False, 
+                                                        header=False)
 
         # Get the consensus for this graph (normal and wrong answers only consensus)
         consensus = pd.read_csv(res_dir / 'consensus.csv')
@@ -82,19 +81,20 @@ def main():
 
     ## Graph comparison analyses
     # Accuracy vs round for each size
-    accuracy_df = pd.read_csv(Path(f'{OUTPUT_ANALYSIS_REP}accuracy.csv'))
+    # accuracy_df = pd.read_csv(Path(f'{OUTPUT_ANALYSIS_REP}accuracy.csv'))
+    # print(accuracy_df)
 
-    for size in accuracy_df['size'].unique():
-        size_directory = Path(f'{OUTPUT_ANALYSIS_REP}{size}_agents/')
+    # for size in accuracy_df['size'].unique():
+    #     size_directory = Path(f'{OUTPUT_ANALYSIS_REP}{size}_agents/')
 
-        accuracy_df_size = accuracy_df.query(f"size == {size}")
+    #     accuracy_df_size = accuracy_df.query(f"size == {size}")
 
-        visu.accurracy_vs_round(accuracy_df_size,
-                                int(size),
-                                size_directory)
+    #     visu.accurracy_vs_round(accuracy_df_size,
+    #                             int(size),
+    #                             size_directory)
         
     # Accuracy vs graph type and size
-    visu.accuracy_vs_agent_number(Path(f'{OUTPUT_ANALYSIS_REP}accuracy.csv'),
+    visu.accuracy_vs_agent_number(Path(f'{OUTPUT_ANALYSIS_REP}network_responses.csv'),
                                   Path(f'{OUTPUT_ANALYSIS_REP}'))
 
     # Consensus vs graph type and size
