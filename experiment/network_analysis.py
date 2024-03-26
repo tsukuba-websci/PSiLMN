@@ -26,10 +26,10 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
     graph_type = agent_response.parent.name.split('/')[-1]
     num_agents = int(agent_response.name.split('.')[0])
     network_bias = "Unbiased"
-    if "correct" in str(agent_response):
-        network_bias = "Correct bias"
-    elif "incorrect" in str(agent_response):
+    if "incorrect" in str(agent_response):
         network_bias = "Incorrect bias"
+    elif "correct" in str(agent_response):
+        network_bias = "Correct bias"
 
     # Directory creation if they do not exist
     final_res_path = analyse_dir / f'{num_agents}_agents/{graph_type}/'
