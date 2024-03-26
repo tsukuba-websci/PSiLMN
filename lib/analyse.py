@@ -4,6 +4,7 @@
 
 import pandas as pd
 from collections import Counter
+from random import shuffle
 
 from typing import Tuple
 
@@ -22,11 +23,19 @@ def get_network_responses(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
                             'correct'], 
                             as_index = False).size()
 
+    # We add a random value at each line. This allow us to randomly select the answer if to answers have
+    # been given by the same number of agents.
+    random_vect = list(range(responses.shape[0]))
+    shuffle(random_vect)
+    responses['rd_number'] = random_vect
+
     # We select the network answer at each question by selecting the most given answer at each question.
     responses = responses.sort_values(['round',
                                      'question_number', 
-                                    'size'],
+                                    'size',
+                                    'rd_number'],
                                     ascending = False)
+
     responses = responses.groupby(['round',
                                     'question_number']).nth(0)
     return responses[['round', 'question_number', 'parsed_response', 'correct']]
