@@ -109,8 +109,7 @@ def accuracy_vs_agent_number(network_responses_path: Path,
     sns.pointplot(data = network_responses_df, 
                  x='size', y='correct',
                  errorbar=("ci",80),
-                 hue='graph_type').set(title="Accuracy vs Graph Size and Graph Type")
-    plt.legend()
+                 hue='network_bias').set(title="Accuracy vs Graph Size and Graph Type")
     plt.xlabel('Number of agents')
     plt.ylabel('Accuracy (%)')
     plt.grid(True)
@@ -130,7 +129,15 @@ def accurracy_vs_round(df_accuracy: pd.DataFrame,
     '''
     plt.figure(figsize=(16, 9))
     data = df_accuracy.query(f'size == {number_agents}')
-    sns.lineplot(data = data, x = 'round', y = 'correct', hue = 'graph_type')
+
+    data['round'] = data['round'].apply(lambda num : str(num))
+    data = data.sort_values(['round', 'question_number'])
+
+    sns.lineplot(data = data, 
+                 x = 'round', 
+                 y = 'correct', 
+                 hue = 'network_bias',
+                 sort=False)
     plt.title(f"Accuracy vs Round Number and Graph Type for {number_agents} agents")
     plt.xlabel('Round number')
     plt.ylabel('Accuracy (%)')
@@ -164,7 +171,7 @@ def consensus_vs_graph(consensus_path: Path,
                   'simpson_wrong_answers.png']
     for Y, title, res_file in zip(Y_list, title_list, files_name):
         plt.figure(figsize=(16, 9))
-        sns.lineplot(data=consensus_df ,x='size', y=Y, hue="graph_type").set(title=f'{title} vs Graph Type and Size')
+        sns.lineplot(data=consensus_df ,x='size', y=Y, hue="network_bias").set(title=f'{title} vs Graph Type and Size')
         plt.xlabel('Number of agents (graph size)')
         plt.ylabel('Consensus (%)')
         plt.grid(True)

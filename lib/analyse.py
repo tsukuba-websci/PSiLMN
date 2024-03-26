@@ -9,11 +9,12 @@ from typing import Tuple
 
 def get_network_responses(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
     '''
-        Return a dataFrame containing the accuracy for each round. 
+        Return a dataFrame containing the agent response for each question and round. 
     '''
     
-    df =  parsed_agent_response
-    
+    df = parsed_agent_response
+    df = parsed_agent_response.query("bias == 'unbiased'")
+
     # We count the number of responses of each type (A, B, C, D, X) for each question
     responses = df.groupby(['round',
                             'question_number', 
@@ -26,12 +27,9 @@ def get_network_responses(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
                                      'question_number', 
                                     'size'],
                                     ascending = False)
-    return responses
-
-    responses = responses.groupby(['round', 'question_number'],
-                                    as_index= False).nth(0)
-    
-    return responses[['round','question_number','parsed_response','correct']]
+    responses = responses.groupby(['round',
+                                    'question_number']).nth(0)
+    return responses[['round', 'question_number', 'parsed_response', 'correct']]
 
 def find_evolutions(parsed_agent_response : pd.DataFrame) -> pd.DataFrame :
     """
@@ -39,7 +37,7 @@ def find_evolutions(parsed_agent_response : pd.DataFrame) -> pd.DataFrame :
     For example, an agent changing is response from incorrect to correct.
     """
     opinion_evol_list = [] # list to be turned into a dataframe
-    df = parsed_agent_response
+    df = parsed_agent_response.query("bias == 'unbiased'")
 
     for id in df['agent_id'].unique():
         for question in df['question_number'].unique():
@@ -69,7 +67,7 @@ def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.
     parsed_agent_response dataFrame.
     '''
     # Read the CSV file
-    df = parsed_agent_response
+    df = parsed_agent_response.query("bias == 'unbiased'")
 
     num_agent = df['agent_id'].unique().size
 
