@@ -34,6 +34,7 @@ def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path) -> pd.DataFr
     df = pd.read_csv(csv_file_to_parse, delimiter='|')
 
     # Analyse responses to find the correct ones
+
     df['parsed_response'] = df['response'].apply(parse_response_mmlu)
     df['correct'] = df['parsed_response'] == df['correct_response']
 
@@ -41,9 +42,16 @@ def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path) -> pd.DataFr
     df['parsed_response'] = df['parsed_response'].apply(lambda string: 
                                                         string if string in ['A', 'B', 'C', 'D'] 
                                                         else 'X')
+    # We harmonize bias column
+    if "bias" in df.columns :
+        df['bias'] = df['bias'].apply(lambda bias : 
+                                      bias if bias in ['correct', 'incorrect'] 
+                                      else "unbiased")
+    else:
+        df['bias'] = "unbiased"
 
     # Remove useless columns
-    df = df[['agent_id', 'round', 'question_number', 'parsed_response', 'correct_response', 'correct']]
+    df = df[['agent_id', 'round', 'question_number', 'parsed_response', 'correct_response', 'correct', 'bias']]
 
     # Save the file
     df.to_csv(res_file_path, mode='w', sep='|', index=False)

@@ -17,7 +17,7 @@ import lib.visualize as visu
 AGENT_RESPONSES_REP = 'output/agent_responses/'
 OUTPUT_ANALYSIS_REP = "output/analysis/"
 
-def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple[Path, str, int]:
+def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple[Path, str, int, str]:
     '''
         Analyse one network, create the related plot and csv files and return the
     path, the name and the number of agents.
@@ -25,6 +25,11 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
     # First, we determine what the file is
     graph_type = agent_response.parent.name.split('/')[-1]
     num_agents = int(agent_response.name.split('.')[0])
+    network_bias = "Unbiased"
+    if "correct" in str(agent_response):
+        network_bias = "Correct bias"
+    elif "incorrect" in str(agent_response):
+        network_bias = "Incorrect bias"
 
     # Directory creation if they do not exist
     final_res_path = analyse_dir / f'{num_agents}_agents/{graph_type}/'
@@ -61,14 +66,4 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
                                final_res_path,
                                wrong_response= True)
 
-    return final_res_path, graph_type, num_agents
-
-def main():
-    Path(OUTPUT_ANALYSIS_REP).mkdir(parents=True, exist_ok=True)
-    analyse_simu(Path(f'{AGENT_RESPONSES_REP}random_network/10.csv'),
-                 Path(OUTPUT_ANALYSIS_REP),
-                 figs = False)
-    return
-
-if __name__ == "__main__":
-    main()
+    return final_res_path, graph_type, num_agents, network_bias
