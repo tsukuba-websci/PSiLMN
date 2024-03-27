@@ -21,7 +21,14 @@ import time
 import os
 import re
 
-async def test_mmlu(model: str = "mistral", rounds: int = 3):
+NUM_NETWORKS = 3
+NUM_QUESTIONS = 5
+NUM_ROUNDS = 5
+NUM_REPEATS = 10
+
+assert(NUM_NETWORKS <= 3)
+
+async def test_mmlu(model: str = "mistral", rounds: int = NUM_ROUNDS):
     """
     Test agent networks with the MMLU dataset.
 
@@ -43,54 +50,57 @@ async def test_mmlu(model: str = "mistral", rounds: int = 3):
 
     dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test").to_pandas()
 
-    dataset = dataset.head(100)
-    num_questions = len(dataset)
+    dataset = dataset.head(NUM_QUESTIONS)
 
-    # todo: this should be a class
-    biases: List[Bias] = [Bias("none", "none"), Bias("correct", "hub"), Bias("incorrect", "hub"), Bias("correct", "edge"), Bias("incorrect", "edge")]
+    # biases: List[Bias] = [Bias("none", "none"), Bias("correct", "hub"), Bias("incorrect", "hub"), Bias("correct", "edge"), Bias("incorrect", "edge")]
+    biases: List[Bias] = [Bias("none", "none"), Bias("incorrect", "hub")]
 
     for bias in biases:
         for network_type in ["scale_free_network"]:
-            for network_number in range(3):
+            for network_number in range(NUM_NETWORKS):
                 network_location = f"data/{network_type}/{network_number}.graphml"
                 for num_agents in [25]:
+                    for repeat in range(NUM_REPEATS):
                     
-                    
-                    if bias.location == "none":
-                        output_file = Path(f"output/unbiased/{network_type}/{num_agents}.csv")
+                        if bias.location == "none":
+                            output_file = Path(f"output/unbiased/agent_responses/{network_type}/{num_agents}.csv")
 
-                    elif bias.location in ["hub", "edge"]:
-                        output_file = Path(f"output/{bias.type}_biased/{network_type}_{bias.location}/{num_agents}.csv")
+                        elif bias.location in ["hub", "edge"]:
+                            output_file = Path(f"output/{bias.type}_biased/agent_responses/{network_type}_{bias.location}/{num_agents}.csv")
 
 
-                    output_file.parent.mkdir(parents=True, exist_ok=True)
+                        output_file.parent.mkdir(parents=True, exist_ok=True)
 
-                    # iterate through each of the questions in the mmul dataset
-                    for question_number, row in tqdm(dataset.iterrows(), total=num_questions, desc="Questions"):
-                        
-                        question = row["input"]
-                        option_a = row["A"]
-                        option_b = row["B"]
-                        option_c = row["C"]
-                        option_d = row["D"]
-                        correct_response = row["target"]
+                        # iterate through each of the questions in the mmul dataset
+                        for question_number, row in tqdm(dataset.iterrows(), total=NUM_QUESTIONS, desc="Questions"):
+                            
+                            question = row["input"]
+                            option_a = row["A"]
+                            option_b = row["B"]
+                            option_c = row["C"]
+                            option_d = row["D"]
+                            correct_response = row["target"]
 
-                        incorrect_response = "A" if correct_response != "A" else "B"
+                            unbiased_agent_input = f"Answer the following question as accurately as possible. {question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nExplain your answer, putting the answer in the form (A), (B), (C) or (D) with round brackets, at the end of your response."
 
-                        unbiased_agent_input = f"Can you answer the following question as accurately as possible? {question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nExplain your answer, putting the answer in the form (A), (B), (C) or (D) with round brackets, at the end of your response."
-                        if bias.type == "correct":
-                            biased_agent_input = f"{question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nThe correct answer is ({correct_response}). Provide a brief explanation of why ({correct_response}) is the answer, ending with the phrase: therefore the answer is ({correct_response})."
-                        elif bias.type == "incorrect":
-                            biased_agent_input = f"{question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nYou need to pretend that the correct anser is ({incorrect_response}). Provide a brief explanation of why ({incorrect_response}) is the answer, ending with the phrase: therefore the answer is ({incorrect_response})."
-                        else:
-                            biased_agent_input = "NA"
+                            if bias.type == "none":
+                                # the biased response is unused so could be anything
+                                biased_agent_input = unbiased_agent_input
+                            else:
+                                if bias.type == "correct":
+                                    biased_reponse = correct_response, row[correct_response]
+                                elif bias.type == "incorrect":
+                                    incorrect_response = "A" if correct_response != "A" else "B"
+                                    biased_reponse = incorrect_response, row[incorrect_response]
 
-                        # load new agents so that agents memory is not carried over
-                        graph, agents = load_agents(network_type, num_agents, model=model, graph_location=network_location, bias=bias)
+                                biased_agent_input = f"{question}\nExplain how the answer could be  ({biased_reponse[0]}) {biased_reponse[1]}. Finish the setence with therefore the answer is ({biased_reponse[0]})."
 
-                        await ask_agents_and_write_responses(agents=agents, unbiased_agent_input=unbiased_agent_input, biased_agent_input=biased_agent_input , output_file=output_file, question_number=question_number, correct_response=correct_response, rounds=rounds, encoding=encoding, max_tokens=max_tokens, graph=graph, network_number=network_number)
+                            # load new agents so that agents memory is not carried over
+                            graph, agents = load_agents(network_type, num_agents, model=model, graph_location=network_location, bias=bias)
 
-                        time.sleep(5)
+                            await ask_agents_and_write_responses(agents=agents, unbiased_agent_input=unbiased_agent_input, biased_agent_input=biased_agent_input , output_file=output_file, question_number=question_number, correct_response=correct_response, encoding=encoding, max_tokens=max_tokens, graph=graph, network_number=network_number, repeat=repeat)
+
+                            time.sleep(5)
 
 def load_agents(network_type: str, n: int, model: str, graph_location: str, bias: Bias) -> Tuple[nx.Graph, Dict[int, Agent]]:
     """
@@ -127,10 +137,6 @@ def load_agents(network_type: str, n: int, model: str, graph_location: str, bias
     for id in graph.nodes:
         agents_dict[id] = Agent(id=id, model=model, bias=bias.type if id in biased_nodes else "none")
 
-    print(f"Bias Location: {bias.location}")
-    print(f"Bias Type: {bias.type}")
-    print(f"Biased nodes: {biased_nodes}")
-
     return graph, agents_dict
 
 async def write_responses_to_csv(file_path: str, responses: list):
@@ -141,7 +147,7 @@ async def write_responses_to_csv(file_path: str, responses: list):
     async with aiofiles.open(file_path, mode='a', newline='') as file:
         # If the file is empty, write the header first
         if file_is_empty:
-            header = "network_number|agent_id|round|question_number|response|correct_response|bias\n"
+            header = "network_number|agent_id|round|question_number|repeat|response|correct_response|bias\n"
             await file.write(header)
 
         for response_row in responses:
@@ -151,55 +157,61 @@ async def write_responses_to_csv(file_path: str, responses: list):
             await file.write(csv_line)
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), reraise=True)
-async def get_response(agent, input):
-    if agent.neighbor_response and agent.bias == "None":
+async def get_response(agent: Agent, input: str, round: int):
+
+    # Alter the agents input if the agent is unbiased and has received a response from a neighbor
+    if agent.neighbor_response and agent.bias == "none":
         input = f"{input}\nBased on your previous response and the solutions of other agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_response}"
+    
+    # Get a new response from the agent only if the agent is unbiased or if the agent is biased and it is the first round
+    if (agent.bias == "none") or (agent.bias != "none" and round == 0):
+        response = await agent.ainterview(input)
+    else:
+        response = agent.response
 
-    response = await agent.ainterview(input)
-    return response.replace("|", " ")
+    return agent.id, response.replace("|", " ")
 
-async def ask_agents_and_write_responses(agents, unbiased_agent_input, biased_agent_input, output_file, question_number, correct_response, rounds, encoding, max_tokens, graph, network_number):
-    print("Asking agents questions...")
-    for round in range(rounds):
+async def ask_agents_and_write_responses(agents, unbiased_agent_input, biased_agent_input, output_file, question_number, correct_response, encoding, max_tokens, graph, network_number, repeat):
+    for round in range(NUM_ROUNDS):
+        agent_responses = await asyncio.gather(*(
+            get_response(agent, biased_agent_input if agent.bias != "none" else unbiased_agent_input, round)
+            for agent in agents.values()
+        ))
 
-        biased_agents = [agent for agent in agents.values() if agent.bias != "none"]
-        print(f"Biased agents: {len(biased_agents)}")
-        unbiased_agents = [agent for agent in agents.values() if agent.bias == "none"]
-        print(f"Unbiased agents: {len(unbiased_agents)}")
+        # Assign responses to agents
+        for agent_id, response in agent_responses:
+            agents[agent_id].response = response
 
-        biased_responses = await asyncio.gather(*(get_response(agent, biased_agent_input) for agent in biased_agents))
-        unbiased_responses = await asyncio.gather(*(get_response(agent, unbiased_agent_input) for agent in unbiased_agents))
-
-        print("Responses received.")
-
-        agent_responses = biased_responses + unbiased_responses
-
-        # Update each agent's response
-        for agent, response in zip(agents.values(), agent_responses):
-            agent.response = response
-
-        # Gather neighbor responses for each agent
+        # Gather and handle neighbor responses for each agent
         for agent_id, agent in agents.items():
-            # randomise the order of the neighbors
             neighbors = list(graph.neighbors(agent_id))
-            random.shuffle(neighbors) 
-            neighbors_responses = [f"Agent {neighbor}: {agents[neighbor].response}" for neighbor in neighbors]
-            neighbor_response = "\n".join(neighbors_responses)
+            random.shuffle(neighbors)
+            neighbors_responses = []
 
-            # Limit for context window
+            # Collect responses from neighbors
+            for neighbor in neighbors:
+                neighbors_responses.append(f"Agent {neighbor}: {agents[neighbor].response}")
+            
+            # Concatenate responses and ensure they fit within max_tokens
+            neighbor_response = "\n".join(neighbors_responses)
             neighbor_response_encoded = encoding.encode(neighbor_response)
-            neighbor_response_encoded = neighbor_response_encoded[:max_tokens]
-            neighbor_response = encoding.decode(neighbor_response_encoded)
+            if len(neighbor_response_encoded) > max_tokens:
+                neighbor_response_encoded = neighbor_response_encoded[:max_tokens]
+                neighbor_response = encoding.decode(neighbor_response_encoded)
             agent.neighbor_response = neighbor_response
 
-        # Write responses to CSV
-        round_info = [[network_number, agent.id, round, question_number, f"{agent.response}", correct_response, agent.bias] for agent in agents.values()]
-        await write_responses_to_csv(str(output_file), round_info)
+        # Prepare data for CSV writing
+        round_info = [
+            [network_number, agent.id, round, question_number, repeat, agent.response, correct_response, agent.bias]
+            for _, agent in agents.items()
+        ]
+        
+        await write_responses_to_csv(output_file, round_info)
 
 def make_single_line(filename: str):
     with open(filename, 'r', encoding='utf-8') as infile:
         content = infile.read()
-        pattern = re.compile(r'(\d+\|\d+\|\d+\|\d+\|)([^|]+?)(\|[ABCD])', re.DOTALL)
+        pattern = re.compile(r'(\d+\|\d+\|\d+\|\d+\|\d+\|)([^|]+?)(\|[ABCD])', re.DOTALL)
 
         def replace_newlines_and_quote(m):
             response_text = m.group(2).replace("\n", " ").replace('"', '').strip()
