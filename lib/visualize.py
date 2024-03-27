@@ -104,11 +104,14 @@ def accuracy_vs_agent_number(network_responses_path: Path,
     '''
     network_responses_df = pd.read_csv(network_responses_path)
     network_responses_df = network_responses_df.query('round == 2')
+    
+    err_palette = {"color": "black"}
 
     plt.figure(figsize=(16, 9))
     sns.pointplot(data = network_responses_df, 
                  x='size', y='correct',
-                 errorbar=("ci",80),
+                 errorbar=("ci", 95),
+                 err_kws=err_palette,
                  hue='network_bias').set(title="Accuracy vs Graph Size and Graph Type")
     plt.xlabel('Number of agents')
     plt.ylabel('Accuracy (%)')
