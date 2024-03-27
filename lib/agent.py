@@ -4,19 +4,17 @@ from typing import Any, Dict, List, Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 import dotenv
+from faker import Faker
 from lib.memory import Memory
 from langchain_community.llms import Ollama
 from langchain_openai import ChatOpenAI
-from langchain.schema.language_model import BaseLanguageModel
-from faker import Faker
-import random
 
 dotenv.load_dotenv("../.env")
 
 class Agent:
     """Generative Agent"""
 
-    def __init__(self, id: str, name: str, bias: str = "None", personality: str = "Not Applicable", model: str = "mistral") -> None:
+    def __init__(self, id: str, bias: str = "None", model: str = "mistral") -> None:
 
         if "mistral" in model:
             llm = Ollama(model="mistral")
@@ -24,7 +22,7 @@ class Agent:
             llm = Ollama(model="phi")
         elif "gpt-3.5-turbo" in model:
             llm = ChatOpenAI(
-                max_tokens=250,
+                max_tokens=200,
                 request_timeout=60,
                 max_retries=5
             )
@@ -32,10 +30,8 @@ class Agent:
             raise ValueError(f"Unknown model: {model}")
 
         self.id = id
-        self.name = name
-        self.personality = personality
+        self.name = fake_name()
         self.verbose = False
-        self.status = f"Name: {name}, Personality: {personality}"
         self.response = ""
         self.neighbor_response = ""
         self.llm = llm
@@ -133,21 +129,6 @@ def communicate(caller: Agent, callee: Agent, question: str, debate_rounds: int 
 
     return conversation
 
-def fake_hobby():
-    hobbies = ["Reading", "Hiking", "Painting", "Cooking", "Gaming", "Traveling", "Photography", "Gardening", "Yoga", "Dancing"]
-    return random.choice(hobbies)
-
-def fake_name():
-    fake = Faker()
-    return fake.name()
-
-def fake_job():
-    fake = Faker()
-    return fake.job()
-
-def fake_age():
-    return random.randint(18, 65)
-
 def solve_math_problems(input_str):
     pattern = r"\d+\.?\d*"
 
@@ -173,3 +154,7 @@ def parse_response_mmlu(response: str) -> Optional[str]:
             break
 
     return answer
+
+def fake_name():
+    fake = Faker()
+    return fake.name()

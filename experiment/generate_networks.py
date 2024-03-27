@@ -69,7 +69,7 @@ def graphml_to_json(filename: str, static: bool = False) -> None:
     network_type = filename.split("/")[1]
     outfilename =  os.path.basename(filename).rsplit(".", 1)[0] + ".json"
 
-    output_path = f'data/scale_free_networks/{outfilename}'
+    output_path = f'data/scale_free_network/{outfilename}'
 
     # Write the JSON data to the output file
     with open(output_path, "w") as outfile:
@@ -86,10 +86,9 @@ def save_network(graph: nx.Graph, index: int, title: str) -> None:
         network_title (str): The title of the network to save.
     """
 
-    location="data/scale_free_networks"
+    location="data/scale_free_network"
+    file_path = f'{location}/{index}.png'
     os.makedirs(location, exist_ok=True)
-
-    num_nodes = graph.number_of_nodes()
 
     # Save the graph as graphml
     file_path = f'{location}/{index}.graphml'
@@ -100,9 +99,9 @@ def save_network(graph: nx.Graph, index: int, title: str) -> None:
 
     # Save graph as png
     plt.figure(figsize=(8, 6))
-    nx.draw_networkx(graph, node_size=50, with_labels=False)
+    nx.draw_networkx(graph, node_size=50, with_labels=True)
     plt.title(title)
-    file_path = f'{location}/{index}.png'
+    plt.tight_layout()
     plt.savefig(file_path, dpi=300)
     plt.close()
 
