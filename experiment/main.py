@@ -22,13 +22,13 @@ import os
 import re
 
 NUM_NETWORKS = 3
-NUM_QUESTIONS = 5
-NUM_ROUNDS = 5
-NUM_REPEATS = 10
+NUM_QUESTIONS = 100
+NUM_ROUNDS = 4
+NUM_REPEATS = 3
 
 assert(NUM_NETWORKS <= 3)
 
-async def test_mmlu(model: str = "mistral", rounds: int = NUM_ROUNDS):
+async def test_mmlu(model: str = "mistral"):
     """
     Test agent networks with the MMLU dataset.
 
@@ -52,8 +52,7 @@ async def test_mmlu(model: str = "mistral", rounds: int = NUM_ROUNDS):
 
     dataset = dataset.head(NUM_QUESTIONS)
 
-    # biases: List[Bias] = [Bias("none", "none"), Bias("correct", "hub"), Bias("incorrect", "hub"), Bias("correct", "edge"), Bias("incorrect", "edge")]
-    biases: List[Bias] = [Bias("none", "none"), Bias("incorrect", "hub")]
+    biases: List[Bias] = [Bias("none", "none"), Bias("correct", "hub"), Bias("incorrect", "hub"), Bias("correct", "edge"), Bias("incorrect", "edge")]
 
     for bias in biases:
         for network_type in ["scale_free_network"]:
@@ -93,7 +92,7 @@ async def test_mmlu(model: str = "mistral", rounds: int = NUM_ROUNDS):
                                     incorrect_response = "A" if correct_response != "A" else "B"
                                     biased_reponse = incorrect_response, row[incorrect_response]
 
-                                biased_agent_input = f"{question}\nExplain how the answer could be  ({biased_reponse[0]}) {biased_reponse[1]}. Finish the setence with therefore the answer is ({biased_reponse[0]})."
+                                biased_agent_input = f"{question}\nExplain how the answer could be ({biased_reponse[0]}) {biased_reponse[1]}. Finish the setence with therefore the answer is ({biased_reponse[0]})."
 
                             # load new agents so that agents memory is not carried over
                             graph, agents = load_agents(network_type, num_agents, model=model, graph_location=network_location, bias=bias)
