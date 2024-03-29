@@ -17,30 +17,50 @@ import lib.visualize as visu
 AGENT_RESPONSES_REP = 'output/agent_responses/'
 OUTPUT_ANALYSIS_REP = "output/analysis/"
 
+def find_caracteristics(file_path : Path) -> Tuple[int, str, str]:
+    '''
+        With the file name, determine the number of agents,
+    the network bias the network type and if biased nodes are 
+    edges or hub nodes.
+    '''
+    num_agents = int(file_path.name.split('.')[0])
+
+    graph_type = "_".join(file_path.parent.name.split('_')[:-1])
+
+    network_bias = "Unbiased"
+    if "incorrect" in str(file_path):
+        network_bias = "Incorrect bias"
+    elif "correct" in str(file_path):
+        network_bias = "Correct bias"
+
+    bias_location = None
+    if network_bias is not "Unbiased":
+        bias_location = file_path.parent.name.split('_')[-1]
+
+    return num_agents, graph_type, network_bias, bias_location
+
 def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple[Path, str, int, str]:
     '''
         Analyse one network, create the related plot and csv files and return the
     path, the name and the number of agents.
     '''
-    # First, we determine what the file is
-    graph_type = agent_response.parent.name.split('/')[-1]
-    num_agents = int(agent_response.name.split('.')[0])
-    network_bias = "Unbiased"
-    if "incorrect" in str(agent_response):
-        network_bias = "Incorrect bias"
-    elif "correct" in str(agent_response):
-        network_bias = "Correct bias"
+    # First, we determine the simulation's main characteristics
+    num_agents, graph_type, network_bias, bias_location = find_caracteristics(agent_response)
 
     # Directory creation if they do not exist
-    final_res_path = analyse_dir / f'{num_agents}_agents/{graph_type}/'
-    Path(final_res_path).mkdir(parents=True, exist_ok=True)
+    final_res_path = analyse_dir / f'{graph_type}_{bias_location}/'
+    final_res_path.mkdir(parents=True, exist_ok=True)
 
     # Parsing the agent output
     agent_parsed_resp = parse.parse_output_mmlu(agent_response, final_res_path / 'agent_response_parsed.csv')
+    network_responses_df = parse.get_network_responses(agent_parsed_resp), final_res_path / 'network_responses.csv'
 
     ### Analysis one by one :
-    # Accuracy per round
-    network_responses_df = analyse.get_network_responses(agent_parsed_resp)
+    # accuracy repartition
+    visu.accuracy_repartition(network_responses_df,
+                              f'{network_bias} {bias_location}',
+                              num_agents,
+                              final_res_path)
 
     # Consensus and simpson consensus
     consensus_df = analyse.calculate_consensus_per_question(agent_parsed_resp)
