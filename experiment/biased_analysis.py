@@ -17,15 +17,15 @@ import lib.analyse as analyse
 import lib.visualize as visu
 
 AGENT_UNBIASED_RESPONSES_REP = 'output/unbiased/agent_responses/'
-BIASED_REP = 'output/biased/'
+OUTPUT = 'output/'
 GLOBAL_ANALYSIS = "output/analysis/"
 
 def main():
     Path(GLOBAL_ANALYSIS).mkdir(parents=True, exist_ok=True)
 
-    csv_files = glob(f'{AGENT_UNBIASED_RESPONSES_REP}scale_free_network/*.csv', recursive=True)
-    csv_files += glob(f'{BIASED_REP}correct/agent_responses/scale_free_network/*.csv', recursive=True)
-    csv_files += glob(f'{BIASED_REP}incorrect/agent_responses/scale_free_network/*.csv', recursive=True)
+    csv_files = glob(f'{OUTPUT}unbiased/agent_responses/scale_free_network/*.csv', recursive=True)
+    csv_files += glob(f'{OUTPUT}correct_biased/agent_responses/scale_free_network/*.csv', recursive=True)
+    csv_files += glob(f'{OUTPUT}incorrect_biased/agent_responses/scale_free_network/*.csv', recursive=True)
 
     # reset result files and write headers
     f = open(f'{GLOBAL_ANALYSIS}network_responses.csv', 'w', newline='')

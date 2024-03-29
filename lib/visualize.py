@@ -14,6 +14,52 @@ import os
 from pathlib import Path
 
 ### Single simulation plot
+def accuracy_repartition(network_responses : pd.DataFrame, 
+                         graph_name : str, 
+                         number_agents : int, 
+                         res_dir_path : Path) -> None:
+    '''
+        Plot the frequency of accuracy for each question on each
+    graph.
+    '''
+    Path(res_dir_path).mkdir(parents=True, exist_ok=True)
+    last_round = network_responses['round'].unique().max()
+    final_responses = network_responses.query(f"round == {last_round}")
+
+    # accuracy per question and per network
+    df = final_responses.groupby(['network_number', 'question_number'])['correct'].mean().reset_index()
+    df = df.rename(columns = {'correct': 'accuracy'})
+    df.to_csv(res_dir_path / 'accuracy_per_question_and_network.csv', index = False)
+
+    plt.figure(figsize=(16, 9))
+    g = sns.displot(df, x="accuracy", hue="network_number")
+    g.set(title=f"Average Accuracy per Question and network for {number_agents} Agents\nin {graph_name}")
+    g.set_axis_labels("Accuracy (proportion of correct answers)", "Frequency (%)")
+    plt.savefig(res_dir_path / 'accuracy_per_question_and_network.png')
+
+    # accuracy per question and repeat
+    df = final_responses.groupby(['question_number', 'repeat'])['correct'].mean().reset_index()
+    df = df.rename(columns = {'correct': 'accuracy'})
+    df.to_csv(res_dir_path / 'accuracy_per_question_and_repeat.csv', index = False)
+
+    plt.figure(figsize=(16, 9))
+    g = sns.displot(df, x="accuracy")
+    g.set(title=f"Average Accuracy per Question for {number_agents} Agents\nin {graph_name}")
+    g.set_axis_labels("Accuracy (proportion of correct answers)", "Frequency (%)")
+    plt.savefig(res_dir_path / 'accuracy_per_question_and_repeat.png')
+
+    # accuracy per network and repeat
+    df = final_responses.groupby(['network_number', 'repeat'])['correct'].mean().reset_index()
+    df = df.rename(columns = {'correct': 'accuracy'})
+    df.to_csv(res_dir_path / 'accuracy_per_network_and repeat.csv', index = False)
+
+    plt.figure(figsize=(16, 9))
+    g = sns.displot(df, x="accuracy")
+    g.set(title=f"Average Accuracy per Network for {number_agents} Agents\nin {graph_name}")
+    g.set_axis_labels("Accuracy (proportion of correct answers)", "Frequency (%)")
+    plt.savefig(res_dir_path / 'accuracy_per_network_and_repeat.png')
+    return
+
 def consensus_repartition(consensus_df : pd.DataFrame,
                             graph_name : str,
                             number_agents : int,

@@ -6,8 +6,6 @@ import pandas as pd
 from collections import Counter
 from random import shuffle
 
-from typing import Tuple
-
 def get_network_responses(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
     '''
         Return a dataFrame containing the agent response for each question and round. 
@@ -17,10 +15,12 @@ def get_network_responses(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
     df = parsed_agent_response.query("bias == 'unbiased'")
 
     # We count the number of responses of each type (A, B, C, D, X) for each question
-    responses = df.groupby(['round',
+    responses = df.groupby(['network_number',
+                            'round',
                             'question_number', 
                             'parsed_response', 
-                            'correct'], 
+                            'correct',
+                            'repeat'], 
                             as_index = False).size()
 
     # We add a random value at each line. This allow us to randomly select the answer if to answers have
@@ -30,15 +30,19 @@ def get_network_responses(parsed_agent_response: pd.DataFrame) -> pd.DataFrame:
     responses['rd_number'] = random_vect
 
     # We select the network answer at each question by selecting the most given answer at each question.
-    responses = responses.sort_values(['round',
+    responses = responses.sort_values(['network_number',
+                                       'round',
                                      'question_number', 
                                     'size',
-                                    'rd_number'],
+                                    'rd_number',
+                                    'repeat'],
                                     ascending = False)
 
-    responses = responses.groupby(['round',
-                                    'question_number']).nth(0)
-    return responses[['round', 'question_number', 'parsed_response', 'correct']]
+    responses = responses.groupby(['network_number',
+                                   'round',
+                                    'question_number',
+                                    'repeat']).nth(0)
+    return responses[['network_number', 'round', 'question_number', 'parsed_response', 'correct', 'repeat']]
 
 def find_evolutions(parsed_agent_response : pd.DataFrame) -> pd.DataFrame :
     """
@@ -48,27 +52,26 @@ def find_evolutions(parsed_agent_response : pd.DataFrame) -> pd.DataFrame :
     opinion_evol_list = [] # list to be turned into a dataframe
     df = parsed_agent_response.query("bias == 'unbiased'")
 
-    for id in df['agent_id'].unique():
-        for question in df['question_number'].unique():
-            for round in [1,2]:
-                prev = df.query(f'agent_id == {id} & question_number == {question} & round == {round-1}')
-                assert len(prev.axes[0]) == 1
-                next = df.query(f'agent_id == {id} & question_number == {question} & round == {round}')
-                assert len(next.axes[0]) == 1
+    for network in df['network_number'].unique():
+        for id in df['agent_id'].unique():
+            for question in df['question_number'].unique():
+                for round in [1,2]:
+                    prev = df.query(f'network_number == {network} & agent_id == {id} & question_number == {question} & round == {round-1}')
+                    assert len(prev.axes[0]) == 1
+                    next = df.query(f'agent_id == {id} & question_number == {question} & round == {round}')
+                    assert len(next.axes[0]) == 1
 
-                # Here we determine wich type of evolution we have : 00, 01, 10 or 11,
-                # with 0 wrong answer and 1 the good one (01 = from 1 to 0).
-                type = None
-                if bool(prev['correct'].values[0]):
-                    type = "C -> "
-                else :
-                    type = "I -> "
-                if bool(next['correct'].values[0]):
-                    type = type+"C"
-                else :
-                    type = type+"I"
-                opinion_evol_list.append([id, str(round), type])
-    return pd.DataFrame(columns = ['agent_id', 'round', 'type'], data=opinion_evol_list)
+                    type = None
+                    if bool(prev['correct'].values[0]):
+                        type = "C -> "
+                    else :
+                        type = "I -> "
+                    if bool(next['correct'].values[0]):
+                        type = type+"C"
+                    else :
+                        type = type+"I"
+                    opinion_evol_list.append([id, str(round), type])
+    return pd.DataFrame(columns = ['network_number', 'agent_id', 'round', 'type'], data=opinion_evol_list)
 
 def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.DataFrame :
     '''
@@ -79,21 +82,28 @@ def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.
     df = parsed_agent_response.query("bias == 'unbiased'")
 
     num_agent = df['agent_id'].unique().size
+    last_round = df['round'].unique().max()
 
     # We select only the correct responses in the last round and remove unecessary columns 
-    final_consensus = df.query('correct & round == 2')[['question_number', 'correct']]
+    final_consensus = df.query(f'correct & round == {last_round}')[['network_number', 'question_number', 'correct']]
 
     # We count the proportion of agent with a correct answers for each question
-    final_consensus = final_consensus.groupby(['question_number']).count().reset_index()
+    final_consensus = final_consensus.groupby(['network_number', 'question_number']).count().reset_index()
     final_consensus['consensus'] = final_consensus['correct'].apply(lambda correct : correct/num_agent)
 
     # Simpson consensus computation. This accuracy is computed as the probability that two answers
     # randomly selected are the same.
-    simpson = df.query("round == 2").groupby(['question_number', 'parsed_response']).size().reset_index(name = 'count')
+    print(df['question_number'])
+    simpson = df.query(f"round == {last_round}").groupby(['network_number', 
+                                                            'question_number', 
+                                                            'parsed_response']).size().reset_index(name = 'count')
     simpson['simpson'] = simpson['count'].apply(lambda count : count/num_agent).apply(lambda p : p*p)
-    simpson = simpson.groupby('question_number').sum().reset_index()[['question_number', 'parsed_response', 'simpson']]
+    simpson = simpson.groupby('network_number', 'question_number').sum().reset_index()[['network_number',
+                                                                                        'question_number', 
+                                                                                        'parsed_response', 
+                                                                                        'simpson']]
 
     # Finally, we join tables
-    final_consensus = pd.merge(final_consensus, simpson, on = 'question_number')
+    final_consensus = pd.merge(final_consensus, simpson, on = ['network_number', 'question_number'])
 
     return final_consensus
