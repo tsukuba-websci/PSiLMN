@@ -3,8 +3,9 @@
 """
 import re
 import pandas as pd
-from pathlib import Path
 
+from pathlib import Path
+from random import shuffle
 from typing import Optional
 
 def parse_response_mmlu(response: str) -> Optional[str]:
@@ -55,9 +56,59 @@ def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path, bias: bool =
         df['bias'] = "unbiased"
 
     # Remove useless columns
-    df = df[['network_number', 'agent_id', 'round', 'question_number', 'parsed_response', 'correct_response', 'correct', 'bias', 'repeat']]
+    df = df[['network_number', 'agent_id', 'round', 'question_number', 'repeat', 'parsed_response', 'correct_response', 'correct', 'bias']]
 
     # Save the file
     df.to_csv(res_file_path, mode='w', sep='|', index=False)
 
     return df
+
+def get_network_responses(parsed_agent_response: pd.DataFrame | Path, save_path: Path) -> pd.DataFrame:
+    '''
+        Return a dataFrame containing the agent response for each question and round, the
+    DataFrame is also saved in save_path location. Save Path should constain the file name
+    and extension (.csv).
+    '''
+    if isinstance(parsed_agent_response, Path):
+        df = pd.read_csv(parsed_agent_response, sep = '|')
+    elif isinstance(parsed_agent_response, pd.DataFrame):
+        df = parsed_agent_response
+    else:
+        raise ValueError("parsed_agent_response should be a pandas DataFrame or a Path")
+    
+    # Biased node are not considered for the network answer.
+    df = parsed_agent_response.query("bias == 'unbiased'")
+
+    # We count the number of responses of each type (A, B, C, D, X) for each question
+    responses: pd.DataFrame = df.groupby(['network_number',
+                                            'round',
+                                            'question_number', 
+                                            'parsed_response', 
+                                            'correct',
+                                            'repeat'], 
+                                            as_index = False).size()
+
+    # We add a random value at each line. This allow us to randomly select the answer if to answers have
+    # been given by the same number of agents.
+    random_vect = list(range(responses.shape[0]))
+    shuffle(random_vect)
+    responses['rd_number'] = random_vect
+
+    # We select the network answer at each question by selecting the most given answer at each question.
+    responses = responses.sort_values(['network_number',
+                                       'round',
+                                     'question_number', 
+                                    'size',
+                                    'rd_number',
+                                    'repeat'],
+                                    ascending = False)
+
+    responses = responses.groupby(['network_number',
+                                   'round',
+                                    'question_number',
+                                    'repeat']).nth(0)
+    
+    responses = responses[['network_number', 'round', 'question_number', 'repeat', 'parsed_response', 'correct']]
+    responses.to_csv(save_path, mode='w', sep = '|', index=False)
+
+    return responses
