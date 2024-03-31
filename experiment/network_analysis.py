@@ -34,7 +34,7 @@ def find_caracteristics(file_path : Path) -> Tuple[int, str, str]:
         network_bias = "Correct bias"
 
     bias_location = None
-    if network_bias is not "Unbiased":
+    if network_bias != "Unbiased":
         bias_location = file_path.parent.name.split('_')[-1]
 
     return num_agents, graph_type, network_bias, bias_location
@@ -53,7 +53,7 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
 
     # Parsing the agent output
     agent_parsed_resp = parse.parse_output_mmlu(agent_response, final_res_path / 'agent_response_parsed.csv')
-    network_responses_df = parse.get_network_responses(agent_parsed_resp), final_res_path / 'network_responses.csv'
+    network_responses_df = parse.get_network_responses(agent_parsed_resp, final_res_path / 'network_responses.csv')
 
     ### Analysis one by one :
     # accuracy repartition
@@ -76,9 +76,10 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
         visu.created_figs(agent_parsed_resp, graphml_path, final_res_path / 'figs/')
 
     # Wrong response consensus
-    wrong_answers_df = network_responses_df.query['correct == False']
-    wrong_answers_consensus = analyse.calculate_consensus_per_question(wrong_answers_df)
-    visu.consensus_repartition(wrong_answers_consensus,
+    agent_parsed_wrong_responses = analyse.filter_wrong_responses(agent_parsed_resp,
+                                                             network_responses_df)
+    consensus_df = analyse.calculate_consensus_per_question(agent_parsed_wrong_responses)
+    visu.consensus_repartition(consensus_df,
                                f'{graph_type} (wrong ansers only)',
                                num_agents,
                                final_res_path,
