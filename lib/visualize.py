@@ -67,7 +67,7 @@ def consensus_repartition(consensus_df : pd.DataFrame,
                             wrong_response = False) -> None:
     '''
         Save the consensus repartition in res_dir_path location. The
-    programm create a two .png image and a .csv file.
+    programm create a .png image and a .csv file.
     res_dir_path should lead to a repertory, not to a file.
     '''
     # csv
@@ -84,7 +84,7 @@ def consensus_repartition(consensus_df : pd.DataFrame,
                             index=False)
                 
     # consensus
-    g = sns.displot(consensus_df, x="consensus")
+    g = sns.displot(consensus_df, x="correct")
     # g.set_theme(rc={'figure.figsize':(11.7,8.27)})
     g.set(title=f"Average Consensus per Question for {number_agents} Agents\nin {graph_name}")
     g.set_axis_labels("Consensus (proportion of correct answers)", "Frequency (%)")
@@ -121,7 +121,7 @@ def opinion_changes(df_opinion_evol: pd.DataFrame,
     plt.figure()
     sns.histplot(data=df_opinion_evol,
                 x="round",
-                hue="type",
+                hue="evolution",
                 hue_order=hue_order,
                 multiple="dodge",
                 shrink=.8,
