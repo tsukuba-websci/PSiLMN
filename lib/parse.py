@@ -61,7 +61,7 @@ def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path) -> pd.DataFr
 
     return df
 
-def get_network_responses(parsed_agent_response: pd.DataFrame | Path, save_path: Path) -> pd.DataFrame:
+def get_network_responses(parsed_agent_response: pd.DataFrame | Path, res_file_path: Path) -> pd.DataFrame:
     '''
         Return a dataFrame containing the agent response for each question and round, the
     DataFrame is also saved in save_path location. Save Path should constain the file name
@@ -107,6 +107,6 @@ def get_network_responses(parsed_agent_response: pd.DataFrame | Path, save_path:
                                     'repeat']).nth(0)
     
     responses = responses[['network_number', 'round', 'question_number', 'repeat', 'parsed_response', 'correct']]
-    responses.to_csv(save_path, mode='w', sep = '|', index=False)
+    responses.to_csv(res_file_path, mode='w', sep = '|', index=False)
 
     return responses

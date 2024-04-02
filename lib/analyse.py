@@ -4,8 +4,111 @@
 
 import pandas as pd
 from pathlib import Path
+from typing import Tuple
+import lib.parse as parse
+import lib.visualize as visu
+
+pd.options.mode.chained_assignment = None
+
+def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple[Path, str, int, str]:
+    '''
+        Analyse the respones of agents from a single simulation run.
+
+        Args:
+            agent_response: Path to the agent response CSV file.
+            analyse_dir: Path to the directory where the analysis results will be saved.
+            figs: Boolean to determine if the figures should be created or not.
+
+        Returns:
+            final_res_path: Path to the directory where the analysis results are saved.
+            graph_type: The type of graph used in the simulation.
+            num_agents: The number of agents in the simulation.
+            network_bias: The type of network bias used in the simulation.
+    '''
+
+    # Parse the file name
+    num_agents, graph_type, network_bias = parse_file_path(agent_response)
+
+    # Create the final result directory
+    final_res_path = analyse_dir / f'{network_bias}/'
+    final_res_path.mkdir(parents=True, exist_ok=True)
+
+    # Parse the agent response
+    agent_parsed_resp = parse.parse_output_mmlu(agent_response, final_res_path / 'agent_response_parsed.csv')
+    network_responses_df = parse.get_network_responses(agent_parsed_resp, final_res_path / 'network_responses.csv')
+
+    # Analyse the responses
+    
+    # Accuracy
+    visu.accuracy_repartition(network_responses_df,
+                              f'{network_bias}',
+                              num_agents,
+                              final_res_path)
+
+    # Consensus
+    consensus_df = calculate_consensus_per_question(agent_parsed_resp)
+    visu.consensus_repartition(consensus_df, graph_type, num_agents, final_res_path)
+
+    # Opinion changes
+    opinion_changes = find_evolutions(agent_parsed_resp)
+    visu.opinion_changes(opinion_changes, graph_type, num_agents, final_res_path)
+
+    # Figs
+    if figs:
+        graphml_path = Path(f'experiment/data/{graph_type}/{num_agents}.graphml')
+        visu.created_figs(agent_parsed_resp, graphml_path, final_res_path / 'figs/')
+
+    # Wrong response consensus
+    agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp,
+                                                             network_responses_df)
+    consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses)
+    visu.consensus_repartition(consensus_df,
+                               f'{graph_type} (wrong ansers only)',
+                               num_agents,
+                               final_res_path,
+                               wrong_response= True)
+
+    return final_res_path, graph_type, num_agents, network_bias
+
+def parse_file_path(file_path : Path) -> Tuple[int, str, str]:
+    '''
+        Parse the file_path to determine the number of agents, the network bias the network type.
+
+        Args:
+            file_path: Path to the agent response CSV file.
+
+        Returns:
+            num_agents: The number of agents in the simulation.
+            graph_type: The type of graph used in the simulation.
+            network_bias: The type of network bias used in the simulation.
+    '''
+    num_agents = int(file_path.name.split('.')[0])
+
+    graph_type = "_".join(file_path.parent.name.split('_')[:-1])
+
+    network_bias = "unbiased"
+    if ("incorrect" in str(file_path)) and ("hub" in str(file_path)):
+        network_bias = "incorrect_bias_hub"
+    elif "incorrect" in str(file_path) and "edge" in str(file_path):
+        network_bias = "incorrect_bias_edge"
+    elif "correct" in str(file_path) and "hub" in str(file_path):
+        network_bias = "correct_bias_hub"
+    elif "correct" in str(file_path) and "edge" in str(file_path):
+        network_bias = "correct_bias_edge"
+
+    return num_agents, graph_type, network_bias
 
 def rename_evolution(prev_correct, next_correct):
+    """
+        Return the type of evolution between two responses.
+
+        Args:
+            prev_correct: Boolean indicating if the previous response is correct.
+            next_correct: Boolean indicating if the next response is correct.
+
+        Returns:
+            type: The type of evolution between the two responses.
+    """
     type = None
     if bool(prev_correct):
         type = "C -> "
@@ -19,8 +122,13 @@ def rename_evolution(prev_correct, next_correct):
 
 def find_evolutions(parsed_agent_response : pd.DataFrame) -> pd.DataFrame :
     """
-        Return the list of changes that have occured in the simulation.
-    For example, an agent changing is response from incorrect to correct.
+    Return the list of changes that have occured in the simulation. For example, an agent changing is response from incorrect to correct.
+
+    Args:
+        parsed_agent_response: The parsed agent response dataframe.
+
+    Returns:
+        final_changes: The list of changes that have occured in the simulation.
     """
     df = parsed_agent_response.query("bias == 'unbiased'")
     final_changes : pd.DataFrame = None # Result
@@ -62,8 +170,13 @@ def find_evolutions(parsed_agent_response : pd.DataFrame) -> pd.DataFrame :
 
 def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.DataFrame :
     '''
-        Return consensus measure and Simpson consensus for each question in the 
-    parsed_agent_response dataFrame.
+        Returns consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
+
+        Args:
+            parsed_agent_response: The parsed agent response dataframe.
+
+        Returns:
+            final_consensus: The consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
     '''
     # Read the CSV file
     df = parsed_agent_response.query("bias == 'unbiased'")
@@ -76,8 +189,8 @@ def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.
 
     # We count the proportion of agent with a correct answers for each question
     correct_prop = correct_prop.groupby(['network_number', 'question_number'])['correct'].mean().reset_index()
-    correct_prop.rename({'correct': 'Correct Agent Proportion'})
-
+    correct_prop = correct_prop.rename(columns={'correct': 'correct_prop'})
+    
     # Simpson consensus computation. This accuracy is computed as the probability that two answers
     # randomly selected are the same.
     simpson = df.query(f"round == {last_round}").groupby(['network_number', 
@@ -99,15 +212,21 @@ def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.
 def filter_wrong_responses(agent_parsed_responses: pd.DataFrame,
                            network_responses: pd.DataFrame) -> pd.DataFrame:
     '''
-        Filter agent parsed rersponses to keep only the lines on which the response
-    of the network is wrong.
+        Filter agent parsed rersponses to keep only the lines on which the response of the network is wrong.
+
+        Args:
+            agent_parsed_responses: The parsed agent response dataframe.
+            network_responses: The network response dataframe.
+
+        Returns:
+            res: The filtered agent parsed responses dataframe.
     '''
     last_round = network_responses['round'].unique().max()
     wrong_responses = network_responses.query(f'correct == False & round == {last_round}')
 
     # We create new columns to concatenates the keys which will be used in isin()
-    wrong_responses['key'] = wrong_responses['network_number'].apply(str) + '_' + wrong_responses['question_number'].apply(str) + '_' + wrong_responses['repeat'].apply(str)
-    agent_parsed_responses['key'] = agent_parsed_responses['network_number'].apply(str) + '_' + agent_parsed_responses['question_number'].apply(str) + '_' + agent_parsed_responses['repeat'].apply(str)
+    wrong_responses.loc[:, 'key'] = wrong_responses['network_number'].astype(str) + '_' + wrong_responses['question_number'].astype(str) + '_' + wrong_responses['repeat'].astype(str)
+    agent_parsed_responses.loc[:, 'key'] = agent_parsed_responses['network_number'].apply(str) + '_' + agent_parsed_responses['question_number'].apply(str) + '_' + agent_parsed_responses['repeat'].apply(str)
 
     res = agent_parsed_responses[agent_parsed_responses['key'].isin(wrong_responses['key'])]
 
