@@ -9,7 +9,9 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import imageio
 import seaborn as sns
+import glob
 import os
+import numpy as np
 
 from pathlib import Path
 
@@ -51,13 +53,19 @@ def accuracy_repartition(network_responses : pd.DataFrame,
     # accuracy per network and repeat
     df = final_responses.groupby(['network_number', 'repeat'])['correct'].mean().reset_index()
     df = df.rename(columns = {'correct': 'accuracy'})
-    df.to_csv(res_dir_path / 'accuracy_per_network_and repeat.csv', index = False)
+    df.to_csv(res_dir_path / 'accuracy_per_network_and_repeat.csv', index = False)
 
     plt.figure(figsize=(16, 9))
     g = sns.displot(df, x="accuracy")
     g.set(title=f"Average Accuracy per Network for {number_agents} Agents\nin {graph_name}")
     g.set_axis_labels("Accuracy (proportion of correct answers)", "Frequency (%)")
     plt.savefig(res_dir_path / 'accuracy_per_network_and_repeat.png')
+
+    # accuracy per round
+    df = network_responses.groupby('round')['correct'].agg(['mean', 'sem']).reset_index()
+    df = df.rename(columns={'mean': 'accuracy', 'sem': 'standard_error'})
+    df.to_csv(res_dir_path / 'accuracy_per_round.csv', index = False)
+
     return
 
 def consensus_repartition(consensus_df : pd.DataFrame,
@@ -227,6 +235,92 @@ def consensus_vs_graph(consensus_path: Path,
         plt.savefig(res_file_path / res_file)
         plt.close('all')
 
+def accuracy_vs_bias(agent_responses_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
+    ''' Plot the accuracy vs bias comparison between graphs. The program creates a .png image and saves it to the output directory. Additionally, now it saves the accuracy and standard error for each csv file into a new csv file. '''
+    # Ensure the output directory exists
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    # Placeholder for results
+    results_df = pd.DataFrame(columns=['network', 'accuracy', 'standard_error'])
+    # Read all the CSVs
+    csv_files = glob.glob(agent_responses_path, recursive=True)
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        average_accuracy_per_network = df.groupby('network_number')['accuracy'].mean()
+        overall_average_accuracy = average_accuracy_per_network.mean()
+        sem = average_accuracy_per_network.std() / np.sqrt(len(average_accuracy_per_network))
+        # Append results
+        results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name],
+                                                          'accuracy': [overall_average_accuracy],
+                                                          'standard_error': [sem]})], ignore_index=True)
+
+    # Save the results to a new CSV file
+    results_df.sort_values(by='accuracy', ascending=False, inplace=True)
+
+    results_path = Path(output_dir) / 'accuracy_and_se.csv'
+    results_df.to_csv(results_path, index=False)
+
+    network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
+
+    plt.figure(figsize=(12, 8))
+    plt.bar(results_df['network'], results_df['accuracy'], yerr=results_df['standard_error'], capsize=5, color=network_colors)
+    plt.xlabel('Network Type', fontsize=20)
+    plt.ylabel('Accuracy', fontsize=20)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.title('Accuracy vs Bias Type', fontsize=24)
+
+    # Set the x-tick labels to the human-readable labels
+    plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(network, network) for network in results_df['network']], rotation=45, ha="right")
+
+    plt.tight_layout()
+    plt.savefig(Path(output_dir) / 'accuracy_vs_bias.png', dpi=300,bbox_inches='tight')
+
+def accuracy_vs_round_ciaran(agent_responses_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
+    # Ensure the output directory exists
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+
+    # Read all CSVs and concatenate into a single DataFrame
+    csv_files = glob.glob(agent_responses_path, recursive=True)
+    results_df = pd.DataFrame()
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file)
+        df['network'] = Path(csv_file).parent.name
+        results_df = pd.concat([results_df, df], ignore_index=True, sort=False)
+
+    # Save the combined DataFrame to a CSV file
+    combined_csv_path = Path(output_dir) / 'accuracy_vs_round.csv'
+    results_df.to_csv(combined_csv_path, index=False)
+
+    plt.figure(figsize=(12, 8))
+    sns.set_style("white")  # Set the background color to white
+
+    for network, group in results_df.groupby('network'):
+        x = group['round']
+        y = group['accuracy']
+        custom_color = graph_colors.get(network, 'gray')
+        plt.plot(x+1, y, marker='o', markersize=5, label=network, linewidth=3, color=custom_color)  # Increase markersize and linewidth
+        plt.errorbar(x+1, y, yerr=group['standard_error'], fmt='none', capsize=5, elinewidth=2, ecolor='black')  # Increase capsize and elinewidth
+
+    plt.xlabel('Round', fontsize=20)  # Increase fontsize
+    plt.ylabel('Accuracy (%)', fontsize=20)  # Increase fontsize
+
+    plt.title('Accuracy vs Round', fontsize=24)  # Increase fontsize
+
+    xticks = np.arange(1, len(results_df['round'].unique()) + 1)
+    plt.xticks(xticks, fontsize=16)
+    plt.yticks(fontsize=16)
+
+    # Use the label_mapping for the legend
+    handles, labels = plt.gca().get_legend_handles_labels()
+    new_labels = [human_readable_labels[label] for label in labels]
+    plt.legend(handles, new_labels, fontsize=14)  # Increase fontsize
+    plt.tight_layout()
+
+    # Save the plot as a PNG file
+    plot_path = Path(output_dir) / 'accuracy_vs_round.png'
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+
+    
 ### Gif functions :
 def created_figs(parsed_agent_response: pd.DataFrame,
                  graphml_path: Path,
