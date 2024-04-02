@@ -69,14 +69,14 @@ def graphml_to_json(filename: str, static: bool = False) -> None:
     network_type = filename.split("/")[1]
     outfilename =  os.path.basename(filename).rsplit(".", 1)[0] + ".json"
 
-    output_path = f'data/{network_type}/{outfilename}'
+    output_path = f'data/scale_free_network/{outfilename}'
 
     # Write the JSON data to the output file
     with open(output_path, "w") as outfile:
         json.dump(out, outfile, indent=4)
 
 
-def save_networks(networks: List[nx.Graph], network_type:str, network_title: str) -> None:
+def save_network(graph: nx.Graph, index: int, title: str) -> None:
     """
     Save a list of networks to disk.
     
@@ -86,54 +86,40 @@ def save_networks(networks: List[nx.Graph], network_type:str, network_title: str
         network_title (str): The title of the network to save.
     """
 
-    directory_path = f'data/{network_type}'
-    os.makedirs(directory_path, exist_ok=True)
-    for n, graph in zip(nodes_list, networks):
-        file_path = f'{directory_path}/{n}.graphml'
-        nx.write_graphml(graph, file_path)
+    location="data/scale_free_network"
+    file_path = f'{location}/{index}.png'
+    os.makedirs(location, exist_ok=True)
 
-        plt.figure(figsize=(8, 6))
-        nx.draw_networkx(graph, node_size=50, with_labels=False)
-        plt.title(f'{network_title} with {n} Nodes')
-        file_path = f'{directory_path}/{n}.png'
-        plt.savefig(file_path)
-        plt.close()
+    # Save the graph as graphml
+    file_path = f'{location}/{index}.graphml'
+    nx.write_graphml(graph, file_path)
+
+    # Save the graph as json
+    graphml_to_json(file_path)
+
+    # Save graph as png
+    plt.figure(figsize=(8, 6))
+    nx.draw_networkx(graph, node_size=50, with_labels=True)
+    plt.title(title)
+    plt.tight_layout()
+    plt.savefig(file_path, dpi=300)
+    plt.close()
 
 if __name__ == "__main__":
-    # Generate  networks with 10, 100, and 1000 nodes
-    nodes_list = [5, 25, 50]
+
+    # Number of nodes in the network
+    network_size = 25
+
+    # Number of graphs to generate
+    networks_per_size = 3
     
-    scale_free_networks = [nx.scale_free_graph(n).to_undirected() for n in nodes_list]
+    # Create scale free networks
+    scale_free_networks = [nx.scale_free_graph(network_size).to_undirected() for _ in range(networks_per_size)] 
+
+    # Remove self loops
     for G in scale_free_networks:
         G.remove_edges_from(nx.selfloop_edges(G))
 
-    watts_strogatz_networks = [nx.watts_strogatz_graph(n, k=4, p=0.1) for n in nodes_list]
-    for G in watts_strogatz_networks:
-        G.remove_edges_from(nx.selfloop_edges(G))
-
-    random_networks = [nx.erdos_renyi_graph(n, p=0.15) for n in nodes_list]
-    for G in random_networks:
-        G.remove_edges_from(nx.selfloop_edges(G))
-
-    fully_connected_networks = [nx.complete_graph(n) for n in nodes_list]
-    for G in fully_connected_networks:
-        G.remove_edges_from(nx.selfloop_edges(G))
-
-    fully_disconnected_networks = [nx.empty_graph(n) for n in nodes_list]
-
     # Save all the networks
-    save_networks(scale_free_networks, "scale_free_network", "Scale-free Network")
-    save_networks(watts_strogatz_networks, "watts_strogatz_network", "Watts-Strogatz Network")
-    save_networks(random_networks, "random_network", "Random Network")
-    save_networks(fully_connected_networks, "fully_connected_network", "Fully Connected Network")
-    save_networks(fully_disconnected_networks, "fully_disconnected_network", "Fully Disconnected Network")
-
-    # Convert the graphml files to json for use in the visualisation
-    networks = ["scale_free_network", "watts_strogatz_network", "random_network", "fully_connected_network", "fully_disconnected_network"]
-    for network in networks:
-        graphml_to_json(filename=f'data/{network}/5.graphml')
-        graphml_to_json(filename=f'data/{network}/10.graphml')
-        graphml_to_json(filename=f'data/{network}/25.graphml')
-        graphml_to_json(filename=f'data/{network}/50.graphml')
-        graphml_to_json(filename=f'data/{network}/100.graphml')
-        graphml_to_json(filename=f'data/{network}/1000.graphml')
+    for index, network in enumerate(scale_free_networks):
+        save_network(graph=network, index=index, title=f"Scale Free Network {index+1}")
