@@ -117,18 +117,14 @@ def consensus_repartition(consensus_df : pd.DataFrame,
         plt.savefig(res_dir_path / f'simpson_wrong_responses.png')
     plt.close('all')
 
-def opinion_changes(df_opinion_evol: pd.DataFrame,
-                    graph_name: str,
-                    res_dir_path: Path) -> None:
+def opinion_changes(df_opinion_evol: pd.DataFrame, graph_name: str, res_dir_path: Path) -> None:
     '''
     Save the opinion change repartition in res_dir_path location.
     The program creates a .png image and a .csv file.
     res_dir_path should lead to a directory, not to a file.
     '''
-
     # rename evolution column
-    df_opinion_evol = df_opinion_evol.rename(columns = {'evolution': 'Answer Change'})
-
+    df_opinion_evol = df_opinion_evol.rename(columns={'evolution': 'Answer Change'})
     print(df_opinion_evol)
 
     # Correctly format the display names
@@ -142,29 +138,31 @@ def opinion_changes(df_opinion_evol: pd.DataFrame,
         "C $\\rightarrow$ I": "#f0898A"   # Dark Orange
     }
     hue_order = ["C $\\rightarrow$ C", "I $\\rightarrow$ I", "I $\\rightarrow$ C", "C $\\rightarrow$ I"]
-
     df_opinion_evol['Answer Change'] = df_opinion_evol['Answer Change'].replace({
         'C -> C': 'C $\\rightarrow$ C',
         'I -> C': 'I $\\rightarrow$ C',
         'C -> I': 'C $\\rightarrow$ I',
         'I -> I': 'I $\\rightarrow$ I'
     })
+
     grouped = df_opinion_evol.groupby(['round', 'Answer Change']).size().reset_index(name='counts')
 
     # Step 2: Calculate the percentage for each 'Answer Change' within each 'round'
     grouped['total_per_round'] = grouped.groupby('round')['counts'].transform('sum')  # Sum per 'round'
     grouped['percentage'] = (grouped['counts'] / grouped['total_per_round']) * 100  # Calculate percentage
-
     print(df_opinion_evol['round'].unique())
 
     # Create the plot
     plt.figure(figsize=(10, 6))
-    gfg = sns.barplot(data=grouped, x='round', y='percentage', hue='Answer Change', hue_order=hue_order, palette=custom_palette)
-
+    gfg = sns.barplot(data=grouped, x='round', y='percentage', hue='Answer Change', hue_order=hue_order,
+                      palette=custom_palette)
     plt.xlabel("Round Number", fontsize=20)
     plt.ylabel("Percentage of Agents (%)", fontsize=20)
-    round_transitions = {1: "1 $\\rightarrow$ 2", 2: "2 $\\rightarrow$ 3", 3: "3 $\\rightarrow$ 4", 4: "4"}
-    plt.xticks(fontsize=16)
+
+    # Define the custom x-tick labels
+    round_transitions = {0: "1 $\\rightarrow$ 2", 1: "2 $\\rightarrow$ 3", 2: "3 $\\rightarrow$ 4"}
+    plt.xticks(ticks=range(0, 3), labels=[round_transitions[i] for i in range(0, 3)], fontsize=16)
+
     plt.yticks(fontsize=16)
     plt.title('Answer Changes', fontsize=24)
     plt.tight_layout()
