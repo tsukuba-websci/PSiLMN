@@ -8,6 +8,7 @@ from faker import Faker
 from lib.memory import Memory
 from langchain_community.llms import Ollama
 from langchain_openai import ChatOpenAI
+import random
 
 dotenv.load_dotenv("../.env")
 
@@ -128,6 +129,21 @@ def communicate(caller: Agent, callee: Agent, question: str, debate_rounds: int 
         turn += 1
 
     return conversation
+
+def fake_hobby():
+    hobbies = ["Reading", "Hiking", "Painting", "Cooking", "Gaming", "Traveling", "Photography", "Gardening", "Yoga", "Dancing"]
+    return random.choice(hobbies)
+
+def fake_name():
+    fake = Faker()
+    return fake.name()
+
+def fake_job():
+    fake = Faker()
+    return fake.job()
+
+def fake_age():
+    return random.randint(18, 65)
 
 def solve_math_problems(input_str):
     pattern = r"\d+\.?\d*"
