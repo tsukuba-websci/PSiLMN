@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+root_dir = Path(__file__).parent.parent
+sys.path.append(str(root_dir))
+
 import pandas as pd
 
 from pathlib import Path
@@ -14,8 +20,10 @@ GLOBAL_ANALYSIS = "output/analysis/"
 GRAPH = 'experiment/data/'
 
 GRAPH_PRETY_NAMES = {'unbiased' : 'Unbiased',
-                     'incorrect_bias' : 'Incorrect Bias',
-                     'correct_bias' : 'Correct Bias',
+                     'incorrect_bias_hub' : 'Incorrect Bias (Hub)',
+                     'correct_bias_hub' : 'Correct Bias (Hub)',
+                     'incorrect_bias_edge' : 'Incorrect Bias (Edge)',
+                     'correct_bias_edge' : 'Correct Bias (Edge)',
                      'fully_connected_network' : 'Fully Connected Network',
                      'fully_disconnected_network' : 'Fully Disconnected Network',
                      'scale_free_network' : 'Scale Free Network',
@@ -36,10 +44,14 @@ def main():
         print(graph_type, num_agents)
 
         network_bias = "unbiased"
-        if "incorrect" in str(agent_responses_path):
-            network_bias = "incorrect_bias"
-        elif "correct" in str(agent_responses_path):
-            network_bias = "correct_bias"
+        if ("incorrect" in str(agent_responses_path)) and ("hub" in str(agent_responses_path)):
+            network_bias = "incorrect_bias_hub"
+        elif "incorrect" in str(agent_responses_path) and "edge" in str(agent_responses_path):
+            network_bias = "incorrect_bias_edge"
+        elif "correct" in str(agent_responses_path) and "hub" in str(agent_responses_path):
+            network_bias = "correct_bias_hub"
+        elif "correct" in str(agent_responses_path) and "edge" in str(agent_responses_path):
+            network_bias = "correct_bias_edge"
 
         res_dir = Path(GLOBAL_ANALYSIS) / network_bias
         res_dir.mkdir(parents=True, exist_ok=True)

@@ -13,15 +13,17 @@ def parse_response_mmlu(response: str) -> Optional[str]:
         Parse the string response for MMLU questions.
     Return Void if it can not find a response.
     """
-    pattern = r'\(([a-zA-Z])\)'
-    matches = re.findall(pattern, response)
 
     answer = None
 
-    for match_str in matches[::-1]:
-        answer = match_str.upper()
-        if answer:
-            break
+    pattern = r'\(([a-zA-Z])\)'
+    if response and not pd.isnull(response):
+        matches = re.findall(pattern, response)
+
+        for match_str in matches[::-1]:
+            answer = match_str.upper()
+            if answer:
+                break
 
     return answer
 
