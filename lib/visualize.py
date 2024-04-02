@@ -125,7 +125,6 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, graph_name: str, res_dir_path
     '''
     # rename evolution column
     df_opinion_evol = df_opinion_evol.rename(columns={'evolution': 'Answer Change'})
-    print(df_opinion_evol)
 
     # Correctly format the display names
     graph_name = graph_name.replace("_", " ").title()
@@ -150,7 +149,6 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, graph_name: str, res_dir_path
     # Step 2: Calculate the percentage for each 'Answer Change' within each 'round'
     grouped['total_per_round'] = grouped.groupby('round')['counts'].transform('sum')  # Sum per 'round'
     grouped['percentage'] = (grouped['counts'] / grouped['total_per_round']) * 100  # Calculate percentage
-    print(df_opinion_evol['round'].unique())
 
     # Create the plot
     plt.figure(figsize=(10, 6))
@@ -322,8 +320,6 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
         results_df = pd.DataFrame(columns=['network', consensus_type, 'standard_error'])
         csv_files = glob.glob(input_file_path, recursive=True)
 
-        print(csv_files)
-
         for csv_file in csv_files:
             df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
             mean = df.mean()
@@ -353,8 +349,6 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
 
         results_df = pd.DataFrame(columns=['network', consensus_type, 'standard_error'])
         csv_files = glob.glob(input_file_path, recursive=True)
-
-        print(csv_files)
 
         for csv_file in csv_files:
             df = pd.read_csv(csv_file).get(consensus_type, pd.Series())

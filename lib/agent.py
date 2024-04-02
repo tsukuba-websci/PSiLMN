@@ -85,51 +85,6 @@ class Agent:
         response = await self.chain(prompt=prompt).ainvoke(kwargs)
         return response["text"].strip()
 
-def communicate(caller: Agent, callee: Agent, question: str, debate_rounds: int = 3) -> List[str]:
-    """
-    A function that runs a conversation between two agents.
-
-    :param caller: The agent that initiates the conversation.
-    :param callee: The agent that responds to the conversation.
-
-    :return: A string that represents the conversation between the two agents.
-    """
-
-    observation = f"{caller.name}: What is your answer to {question} and why?"
-
-    caller.memory.add_memory(observation)
-    print(observation)
-
-    turn = 1
-    conversation = [observation]
-
-    while True:
-        # Limit the amount of possible speaking turns
-        if turn >= debate_rounds:
-            force_goodbye_statement = f"{caller.name}: Excuse me {callee.name}, I have to go now!"
-            conversation.append(force_goodbye_statement)
-            caller.memory.add_memory(force_goodbye_statement)
-            callee.memory.add_memory(force_goodbye_statement)
-            print(force_goodbye_statement)
-            break
-        else:
-            observation = callee.interview(question=observation, correspodee=caller.name)
-            observation = observation.replace('"', '')
-            conversation.append(observation)
-            caller.memory.add_memory(observation)
-            callee.memory.add_memory(observation)
-            print(observation)
-
-            observation = caller.interview(question=observation, correspodee=callee.name)
-            observation = observation.replace('"', '')
-            conversation.append(observation)
-            caller.memory.add_memory(observation)
-            callee.memory.add_memory(observation)
-            print(observation)
-        turn += 1
-
-    return conversation
-
 def fake_hobby():
     hobbies = ["Reading", "Hiking", "Painting", "Cooking", "Gaming", "Traveling", "Photography", "Gardening", "Yoga", "Dancing"]
     return random.choice(hobbies)
