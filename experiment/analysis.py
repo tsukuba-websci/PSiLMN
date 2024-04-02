@@ -30,7 +30,7 @@ GRAPH_COLORS = {
     'correct_bias_hub': '#4daf4a',
     'correct_bias_edge': '#a6d854',
     'incorrect_bias_hub': '#e41a1c',
-    'incorrect_bias_edge': '#f768a1',
+    'incorrect_bias_edge': '#f25355',
 }
 
 def main():

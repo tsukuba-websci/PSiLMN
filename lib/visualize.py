@@ -119,35 +119,64 @@ def consensus_repartition(consensus_df : pd.DataFrame,
 
 def opinion_changes(df_opinion_evol: pd.DataFrame,
                     graph_name: str,
-                    number_agents: int,
-                    res_dir_path : Path) -> None:
+                    res_dir_path: Path) -> None:
     '''
-        Save the opinion change repartition in res_dir_path location. The
-    programm create a .png image and a .csv file.
-    res_dir_path should lead to a repertory, not to a file.
+    Save the opinion change repartition in res_dir_path location.
+    The program creates a .png image and a .csv file.
+    res_dir_path should lead to a directory, not to a file.
     '''
-    custom_palette = {"I -> I": "orange", "C -> C": "blue", "I -> C": "green", "C -> I" : "red"}
-    hue_order = ["C -> C", "I -> I", "I -> C", "C -> I"]
 
-    plt.figure()
-    sns.histplot(data=df_opinion_evol,
-                x="round",
-                hue="evolution",
-                hue_order=hue_order,
-                multiple="dodge",
-                shrink=.8,
-                stat="density",
-                palette=custom_palette).set(title=f"Opinion Changes during the Round for {number_agents} Agents \nin a {graph_name}")
-    plt.xlabel("round number")
-    plt.ylabel("number of agents")
+    # rename evolution column
+    df_opinion_evol = df_opinion_evol.rename(columns = {'evolution': 'Answer Change'})
 
-    # Save the fig
+    print(df_opinion_evol)
+
+    # Correctly format the display names
+    graph_name = graph_name.replace("_", " ").title()
+
+    # Define the custom palette and the order of the hues
+    custom_palette = {
+        "I $\\rightarrow$ I": "#e41a1c",  # Cornflower Blue
+        "C $\\rightarrow$ C": "#4daf4a",  # Golden Rod
+        "I $\\rightarrow$ C": "#a6d854",  # Lime Green
+        "C $\\rightarrow$ I": "#f0898A"   # Dark Orange
+    }
+    hue_order = ["C $\\rightarrow$ C", "I $\\rightarrow$ I", "I $\\rightarrow$ C", "C $\\rightarrow$ I"]
+
+    df_opinion_evol['Answer Change'] = df_opinion_evol['Answer Change'].replace({
+        'C -> C': 'C $\\rightarrow$ C',
+        'I -> C': 'I $\\rightarrow$ C',
+        'C -> I': 'C $\\rightarrow$ I',
+        'I -> I': 'I $\\rightarrow$ I'
+    })
+    grouped = df_opinion_evol.groupby(['round', 'Answer Change']).size().reset_index(name='counts')
+
+    # Step 2: Calculate the percentage for each 'Answer Change' within each 'round'
+    grouped['total_per_round'] = grouped.groupby('round')['counts'].transform('sum')  # Sum per 'round'
+    grouped['percentage'] = (grouped['counts'] / grouped['total_per_round']) * 100  # Calculate percentage
+
+    print(df_opinion_evol['round'].unique())
+
+    # Create the plot
+    plt.figure(figsize=(10, 6))
+    gfg = sns.barplot(data=grouped, x='round', y='percentage', hue='Answer Change', hue_order=hue_order, palette=custom_palette)
+
+    plt.xlabel("Round Number", fontsize=20)
+    plt.ylabel("Percentage of Agents (%)", fontsize=20)
+    round_transitions = {1: "1 $\\rightarrow$ 2", 2: "2 $\\rightarrow$ 3", 3: "3 $\\rightarrow$ 4", 4: "4"}
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.title('Answer Changes', fontsize=24)
+    plt.tight_layout()
+
+    # for legend text
+    plt.setp(gfg.get_legend().get_texts(), fontsize='16')
+    plt.setp(gfg.get_legend().get_title(), fontsize='20')
+
+    # Save the figure and data
     Path(res_dir_path).mkdir(parents=True, exist_ok=True)
-    df_opinion_evol.to_csv(res_dir_path / f'opinion_changes.csv',
-                           mode = 'w',
-                           sep = ',',
-                           index=False)
-    plt.savefig(res_dir_path / f'opinion_changes.png')
+    df_opinion_evol.to_csv(res_dir_path / 'opinion_changes.csv', mode='w', sep=',', index=False)
+    plt.savefig(res_dir_path / 'opinion_changes.png', dpi=300)
     plt.close('all')
 
 ### Cross simulation plot

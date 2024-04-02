@@ -51,7 +51,7 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
-    visu.opinion_changes(opinion_changes, graph_type, num_agents, final_res_path)
+    visu.opinion_changes(opinion_changes, graph_type, final_res_path)
 
     # Figs
     if figs:
