@@ -27,7 +27,7 @@ def parse_response_mmlu(response: str) -> Optional[str]:
 
     return answer
 
-def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path, bias: bool = True) -> pd.DataFrame:
+def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path) -> pd.DataFrame:
     """
         Parse agent response csv file to analyse which answer is correct and which is not.
     Save the result in res_file_path. res_file_path should be in an existing repository.
@@ -35,10 +35,7 @@ def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path, bias: bool =
     Return the panda dataFrame.
     """
     df = pd.read_csv(csv_file_to_parse, delimiter='|')
-
-    if bias:
-        # Remove bias nodes when calculating accuracy
-        df = df[df['bias'].isna()]
+    df = df.query("bias == 'none'")
 
     # Analyse responses to find the correct ones
 
