@@ -50,6 +50,8 @@ def main():
 
     visu.consensus_vs_bias(f"{OUTPUT_PATH}**/analysis/**/consensus.csv", COMBINED_ANALYSIS_PATH, GRAPH_NAMES, GRAPH_COLORS)
 
+    visu.consensus_incorrect_vs_bias(f"{OUTPUT_PATH}**/analysis/**/consensus_wrong_response.csv", COMBINED_ANALYSIS_PATH, GRAPH_NAMES, GRAPH_COLORS)
+
     return
 
 if __name__ == '__main__':

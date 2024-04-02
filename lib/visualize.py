@@ -340,9 +340,42 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
         plt.ylabel(f'{consensus_label}', fontsize=20)
         plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], rotation=45, ha="right", fontsize=16)
         plt.yticks(fontsize=16)
+        plt.ylim(0,1)
         plt.title(f'{consensus_label} vs Bias Type', fontsize=24)
         plt.tight_layout()
         plt.savefig(Path(output_dir) / f'{consensus_type}_vs_bias.png', dpi=300, bbox_inches='tight')
+
+def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
+
+    consensus_types = {'correct_prop': 'Consensus of Incorrect Answers', 'simpson': 'Simpson Consensus of Incorrect Answers'}
+
+    for consensus_type, consensus_label in consensus_types.items():
+
+        results_df = pd.DataFrame(columns=['network', consensus_type, 'standard_error'])
+        csv_files = glob.glob(input_file_path, recursive=True)
+
+        print(csv_files)
+
+        for csv_file in csv_files:
+            df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
+            mean = df.mean()
+            sem = df.std() / np.sqrt(len(df))
+            results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
+
+        results_path = Path(output_dir) / f'{consensus_type}_incorrect_and_bias.csv'
+        results_df.to_csv(results_path, index=False)
+
+        network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
+        plt.figure(figsize=(12, 8))
+        plt.bar(range(len(results_df['network'])), results_df[consensus_type], yerr=results_df['standard_error'], capsize=5, color=network_colors)
+        plt.xlabel('Network Type', fontsize=20)
+        plt.ylabel(f'{consensus_label}', fontsize=20)
+        plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], rotation=45, ha="right", fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.ylim(0,1)
+        plt.title(f'{consensus_label} vs Bias Type', fontsize=24)
+        plt.tight_layout()
+        plt.savefig(Path(output_dir) / f'{consensus_type}_incorrect_vs_bias.png', dpi=300, bbox_inches='tight')        
 
 ### Gif functions :
 def created_figs(parsed_agent_response: pd.DataFrame,
