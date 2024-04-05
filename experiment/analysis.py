@@ -40,7 +40,9 @@ def main():
 
     for file in csv_files:
         analyse.analyse_simu(agent_response= Path(file), 
-                                        analyse_dir= Path(file).parent.parent.parent / "analysis/", 
+                                        analyse_dir= Path(file).parent.parent.parent / "analysis/",
+                                        graph_names=GRAPH_NAMES,
+                                        graph_colors=GRAPH_COLORS,
                                         figs = False)
         
 

@@ -10,7 +10,7 @@ import lib.visualize as visu
 
 pd.options.mode.chained_assignment = None
 
-def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple[Path, str, int, str]:
+def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str, str], graph_colors: dict[str, str], figs = False) -> Tuple[Path, str, int, str]:
     '''
         Analyse the respones of agents from a single simulation run.
 
@@ -41,7 +41,7 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
     
     # Accuracy
     visu.accuracy_repartition(network_responses_df,
-                              f'{network_bias}',
+                              network_bias,
                               num_agents,
                               final_res_path)
 
@@ -51,7 +51,7 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, figs = False) -> Tuple
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
-    visu.opinion_changes(opinion_changes, graph_type, final_res_path)
+    visu.opinion_changes(opinion_changes, network_bias, final_res_path, graph_names, graph_colors)
 
     # Figs
     if figs:

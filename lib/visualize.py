@@ -117,7 +117,7 @@ def consensus_repartition(consensus_df : pd.DataFrame,
         plt.savefig(res_dir_path / f'simpson_wrong_responses.png')
     plt.close('all')
 
-def opinion_changes(df_opinion_evol: pd.DataFrame, graph_name: str, res_dir_path: Path) -> None:
+def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path, graph_names: dict[str, str], graph_colors: dict[str, str]) -> None:
     '''
     Save the opinion change repartition in res_dir_path location.
     The program creates a .png image and a .csv file.
@@ -127,14 +127,14 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, graph_name: str, res_dir_path
     df_opinion_evol = df_opinion_evol.rename(columns={'evolution': 'Answer Change'})
 
     # Correctly format the display names
-    graph_name = graph_name.replace("_", " ").title()
+    title = graph_names.get(bias, bias)
 
     # Define the custom palette and the order of the hues
     custom_palette = {
-        "I $\\rightarrow$ I": "#e41a1c",  # Cornflower Blue
-        "C $\\rightarrow$ C": "#4daf4a",  # Golden Rod
-        "I $\\rightarrow$ C": "#a6d854",  # Lime Green
-        "C $\\rightarrow$ I": "#f0898A"   # Dark Orange
+        "I $\\rightarrow$ I": graph_colors['incorrect_bias_hub'],
+        "C $\\rightarrow$ C": graph_colors['correct_bias_hub'],
+        "I $\\rightarrow$ C": graph_colors['correct_bias_edge'],
+        "C $\\rightarrow$ I": graph_colors['incorrect_bias_edge']
     }
     hue_order = ["C $\\rightarrow$ C", "I $\\rightarrow$ I", "I $\\rightarrow$ C", "C $\\rightarrow$ I"]
     df_opinion_evol['Answer Change'] = df_opinion_evol['Answer Change'].replace({
@@ -156,13 +156,14 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, graph_name: str, res_dir_path
                       palette=custom_palette)
     plt.xlabel("Round Number", fontsize=20)
     plt.ylabel("Percentage of Agents (%)", fontsize=20)
-
+    plt.ylim(0, 70)
     # Define the custom x-tick labels
     round_transitions = {0: "1 $\\rightarrow$ 2", 1: "2 $\\rightarrow$ 3", 2: "3 $\\rightarrow$ 4"}
+
     plt.xticks(ticks=range(0, 3), labels=[round_transitions[i] for i in range(0, 3)], fontsize=16)
 
     plt.yticks(fontsize=16)
-    plt.title('Answer Changes', fontsize=24)
+    plt.title(title, fontsize=24)
     plt.tight_layout()
 
     # for legend text
