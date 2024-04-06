@@ -369,9 +369,38 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
         plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], rotation=45, ha="right", fontsize=16)
         plt.yticks(fontsize=16)
         plt.ylim(0,1)
-        plt.title(f'{consensus_label} vs Bias Type', fontsize=24)
+        plt.title(f'{consensus_label} vs Bias Type',)
         plt.tight_layout()
         plt.savefig(Path(output_dir) / f'{consensus_type}_incorrect_vs_bias.png', dpi=300, bbox_inches='tight')        
+
+def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: dict[str, str]) -> None:
+    
+    csv_files = glob.glob(input_file_path, recursive=True)
+
+    df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
+
+    df['correct'] = df['correct'].astype('category')
+    
+    # Prepare the plot
+    plt.figure(figsize=(12, 8))
+
+    custom_palette = {True: graph_colours['correct_bias_hub'], False: graph_colours['incorrect_bias_hub']}  # Example: Blue for True, Orange for False
+
+    # KDE plot for the distribution of proportion of correct neighbors, split by correctness
+    # The `clip` parameter restricts the range of the KDE to [0, 1]
+    sns.kdeplot(data=df, x='proportion_neighbors_correct', hue='correct', fill=True, common_norm=False, palette=custom_palette, alpha=0.5, linewidth=0, clip=(0, 1))
+    
+    plt.title('Agent Correctness by Proportion of Neighbours Correct',  fontsize=24)
+    plt.xlabel('Proportion of Correct Neighbours Correct', fontsize=20)
+    plt.ylabel('Density', fontsize=20)
+    plt.yticks(fontsize=16)
+    plt.xticks(fontsize=16)
+
+    plt.legend(title='Correctness', labels=['Correct', 'Incorrect'], fontsize=16, title_fontsize=16, loc='upper left')
+    
+    plt.tight_layout()
+    plt.savefig(f"{res_dir_path}neighbours_accuracy.png", dpi=300)
+
 
 def created_gifs(parsed_agent_response: pd.DataFrame,
                  graphml_path: Path,

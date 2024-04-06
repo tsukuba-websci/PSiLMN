@@ -92,7 +92,7 @@ async def test_mmlu(model: str = "mistral"):
                                     incorrect_response = "A" if correct_response != "A" else "B"
                                     biased_reponse = incorrect_response, row[incorrect_response]
 
-                                biased_agent_input = f"{question}\nExplain how the answer could be ({biased_reponse[0]}) {biased_reponse[1]}. Finish the setence with therefore the answer is ({biased_reponse[0]})."
+                                biased_agent_input = f"{question}\nExplain how the answer could be ({biased_reponse[0]}) {biased_reponse[1]}. Finish the sentence with therefore the answer is ({biased_reponse[0]})."
 
                             # load new agents so that agents memory is not carried over
                             graph, agents = load_agents(network_type, num_agents, model=model, graph_location=network_location, bias=bias)
