@@ -43,7 +43,7 @@ def main():
                                         analyse_dir= Path(file).parent.parent.parent / "analysis/",
                                         graph_names=GRAPH_NAMES,
                                         graph_colors=GRAPH_COLORS,
-                                        figs = False)
+                                        gifs = True)
         
 
     visu.accuracy_vs_bias(f"{OUTPUT_PATH}**/analysis/**/accuracy_per_network_and_repeat.csv", COMBINED_ANALYSIS_PATH, GRAPH_NAMES, GRAPH_COLORS)

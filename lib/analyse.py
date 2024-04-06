@@ -10,7 +10,7 @@ import lib.visualize as visu
 
 pd.options.mode.chained_assignment = None
 
-def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str, str], graph_colors: dict[str, str], figs = False) -> Tuple[Path, str, int, str]:
+def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str, str], graph_colors: dict[str, str], gifs = False) -> Tuple[Path, str, int, str]:
     '''
         Analyse the respones of agents from a single simulation run.
 
@@ -54,9 +54,10 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str,
     visu.opinion_changes(opinion_changes, network_bias, final_res_path, graph_names, graph_colors)
 
     # Figs
-    if figs:
-        graphml_path = Path(f'experiment/data/{graph_type}/{num_agents}.graphml')
-        visu.created_figs(agent_parsed_resp, graphml_path, final_res_path / 'figs/')
+    if gifs:
+        for network_num in range(3):
+            graphml_path = Path(f'data/{graph_type}/{network_num}.graphml')
+            visu.created_gifs(agent_parsed_resp, graphml_path, final_res_path / f'gifs/{network_num}/', network_num= network_num, graph_colors= graph_colors)
 
     # Wrong response consensus
     agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp,

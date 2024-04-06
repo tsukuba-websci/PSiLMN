@@ -257,7 +257,7 @@ def accuracy_vs_bias(input_file_path: str, output_dir: str, human_readable_label
     network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
 
     plt.figure(figsize=(12, 8))
-    plt.bar(results_df['network'], results_df['accuracy'], yerr=results_df['standard_error'], capsize=5, color=network_colors)
+    plt.bar(results_df['network'], results_df['accuracy'] * 100, yerr=results_df['standard_error'] * 100, capsize=5, color=network_colors)
     plt.xlabel('Network Type', fontsize=20)
     plt.ylabel('Accuracy (%)', fontsize=20)
     plt.xticks(fontsize=16)
@@ -283,15 +283,16 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     combined_csv_path = Path(output_dir) / 'accuracy_and_round.csv'
     results_df.to_csv(combined_csv_path, index=False)
 
+
     plt.figure(figsize=(12, 8))
     sns.set_style("white")
 
     for network, group in results_df.groupby('network'):
         x = group['round']
-        y = group['accuracy']
+        y = group['accuracy']*100
         custom_color = graph_colors.get(network, 'gray')
         plt.plot(x+1, y, marker='o', markersize=5, label=network, linewidth=3, color=custom_color)  # Increase markersize and linewidth
-        plt.errorbar(x+1, y, yerr=group['standard_error'], fmt='none', capsize=5, elinewidth=2, ecolor='black')  # Increase capsize and elinewidth
+        plt.errorbar(x+1, y, yerr=group['standard_error']*100, fmt='none', capsize=5, elinewidth=2, ecolor='black')  # Increase capsize and elinewidth
 
     plt.xlabel('Round', fontsize=20)  # Increase fontsize
     plt.ylabel('Accuracy (%)', fontsize=20)  # Increase fontsize
@@ -332,12 +333,12 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
 
         network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
         plt.figure(figsize=(12, 8))
-        plt.bar(range(len(results_df['network'])), results_df[consensus_type], yerr=results_df['standard_error'], capsize=5, color=network_colors)
+        plt.bar(range(len(results_df['network'])), results_df[consensus_type]*100, yerr=results_df['standard_error']*100, capsize=5, color=network_colors)
         plt.xlabel('Network Type', fontsize=20)
         plt.ylabel(f'{consensus_label}', fontsize=20)
         plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], rotation=45, ha="right", fontsize=16)
         plt.yticks(fontsize=16)
-        plt.ylim(0,1)
+        plt.ylim(0,100)
         plt.title(f'{consensus_label} vs Bias Type', fontsize=24)
         plt.tight_layout()
         plt.savefig(Path(output_dir) / f'{consensus_type}_vs_bias.png', dpi=300, bbox_inches='tight')
@@ -372,59 +373,89 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
         plt.tight_layout()
         plt.savefig(Path(output_dir) / f'{consensus_type}_incorrect_vs_bias.png', dpi=300, bbox_inches='tight')        
 
-### Gif functions :
-def created_figs(parsed_agent_response: pd.DataFrame,
+def created_gifs(parsed_agent_response: pd.DataFrame,
                  graphml_path: Path,
-                 res_repertory: Path) -> None:
+                 res_repertory: Path,
+                 network_num: int,
+                 graph_colors: dict[str, str]) -> None:
     '''
-        Fill res_repertory with an animated Gif for each question of the
-    simulation.
+        Fill res_repertory with an animated Gif for each question of the simulation.
     '''
     df = parsed_agent_response
 
+    if '/correct_bias' in str(res_repertory):
+        bias = 'correct_bias'
+    elif '/incorrect_bias' in str(res_repertory):
+        bias = 'incorrect_bias'
+
     num_agents = df['agent_id'].unique().max() + 1
 
-    graph = nx.read_graphml(graphml_path)
-    pos = nx.spring_layout(graph)
+    G = nx.read_graphml(graphml_path)
+    pos = nx.spring_layout(G, seed=42)
 
     rounds = df['round'].unique()
     questions = df['question_number'].unique()
 
-    for question in questions:
-        images = []  # To store paths of images for the current question
-        for round_ in rounds:
-            round_df = df[(df['round'] == round_) & (df['question_number'] == question)]
-            color_map = ['green' if row['correct'] else 'red' for _, row in round_df.iterrows()]
+    for repeat in range(3):
 
-            plt.figure(figsize=(10, 8))
-            nx.draw(graph, pos=pos, node_color=color_map, with_labels=True, node_size=700)
-            plt.title(f'Q{question} R{round_}')
+        res_repertory_repeat = res_repertory / f'repeat_{repeat}'
+        res_repertory_repeat.mkdir(parents=True, exist_ok=True)
 
-            # Add round number text on the plot
-            plt.text(0.05, 0.95, f'Round: {round_}', 
-                     transform=plt.gca().transAxes, 
-                     fontsize=14, verticalalignment='top', 
-                     bbox=dict(boxstyle="round", 
-                               alpha=0.5, 
-                               facecolor='white'))
+        for question in questions:
+            images = []
 
-            # Save the plot for the current round
-            image_path = res_repertory / f'/{num_agents}_q{question}_r{round_+1}.png'
+            for round_ in rounds:
+                round_df = df[(df['round'] == round_) & (df['question_number'] == question) & (df['repeat'] == repeat) & (df['network_number'] == network_num)]
+                agent_ids = round_df['agent_id'].unique()
+                missing_agents = list(set(range(num_agents)) - set(agent_ids))
 
-            # Ensure the directory exists
-            os.makedirs(res_repertory, exist_ok=True)
-            plt.savefig(image_path)
-            plt.close('all')
+                color_map = ['blue'] * num_agents  # Initialize all agents to blue
 
-            images.append(image_path)
+                # Coloring for missing agents based on bias
+                for agent_id in missing_agents:
+                    if bias == 'correct_bias':
+                        color_map[agent_id] = graph_colors['correct_bias_hub']
+                    else:
+                        color_map[agent_id] = graph_colors['incorrect_bias_hub']
 
-        # Create a GIF for the current question
-        gif_path = res_repertory / f'{num_agents}_q{question}.gif'
-        with imageio.get_writer(gif_path, mode='I', fps=1, loop=0) as writer:
+                # Coloring for agents present in the round
+                for agent_id in range(num_agents):
+                    if agent_id in round_df['agent_id'].values:
+                        row = round_df[round_df['agent_id'] == agent_id].iloc[0]
+                        color_map[agent_id] = graph_colors['correct_bias_edge'] if row['correct'] else graph_colors['incorrect_bias_edge']
+
+                plt.figure(figsize=(8, 8))
+
+                pos = nx.spring_layout(G, seed=42)  # Position nodes using the spring layout
+                nx.draw_networkx_nodes(G, pos, node_size=500, node_color=color_map, alpha=1)
+                nx.draw_networkx_edges(G, pos, alpha=1)
+                plt.axis('off')
+
+                # Add round number text above the plot
+                round_text = f'Round: {round_ + 1}'
+                text_x = 0.05
+                text_y = 0.95
+                text_color = '#333333'
+                text_font = 'Arial'
+                text_size = 16
+                text_weight = 'bold'
+
+                plt.text(text_x, text_y, round_text, transform=plt.gca().transAxes, fontsize=text_size, 
+                        fontname=text_font, fontweight=text_weight, color=text_color, 
+                        verticalalignment='top')
+
+                image_path = res_repertory_repeat / f'{num_agents}_q{question}_r{round_+1}.png'
+                plt.savefig(image_path, dpi=300)
+                plt.close('all')
+
+                images.append(image_path)
+
+            gif_path = res_repertory_repeat / f'q{question}.gif'
+            print(f"Saving gif to {gif_path}")
+            with imageio.get_writer(gif_path, mode='I', fps=1, loop=0) as writer:
+                for image_path in images:
+                    image = imageio.v3.imread(image_path)
+                    writer.append_data(image)
+
             for image_path in images:
-                image = imageio.v3.imread(image_path)
-                writer.append_data(image)
-        
-        # Optional: Remove the individual round images to clean up
-        for image_path in images:
-            os.remove(image_path)
+                os.remove(image_path)
