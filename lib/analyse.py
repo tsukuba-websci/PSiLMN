@@ -47,7 +47,7 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str,
                               final_res_path)
 
     # Consensus
-    consensus_df = calculate_consensus_per_question(agent_parsed_resp)
+    consensus_df = calculate_consensus_per_question(agent_parsed_resp,network_bias)
     visu.consensus_repartition(consensus_df, graph_type, num_agents, final_res_path)
 
     # Opinion changes
@@ -66,7 +66,7 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str,
     # Wrong response consensus
     agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp,
                                                              network_responses_df)
-    consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses)
+    consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses, network_bias)
     visu.consensus_repartition(consensus_df,
                                f'{graph_type} (wrong ansers only)',
                                num_agents,
@@ -233,7 +233,7 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
 
     return df_final
 
-def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.DataFrame :
+def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, network_bias: str) -> pd.DataFrame :
     '''
         Returns consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
 
@@ -243,10 +243,13 @@ def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.
         Returns:
             final_consensus: The consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
     '''
+
+    biased = True if 'unbiased' not in network_bias else False
+
     # Read the CSV file
     df = parsed_agent_response.query("bias == 'unbiased'")
 
-    num_agent = df['agent_id'].unique().size
+    num_agent = 23 if biased else 25
     last_round = df['round'].unique().max()
 
     # We select only the correct responses in the last round and remove unecessary columns 

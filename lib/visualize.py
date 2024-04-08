@@ -71,51 +71,56 @@ def accuracy_repartition(network_responses : pd.DataFrame,
 
     return
 
-def consensus_repartition(consensus_df : pd.DataFrame,
-                            graph_name : str,
-                            number_agents : int,
-                            res_dir_path : Path,
-                            wrong_response = False) -> None:
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
+import pandas as pd
+
+def consensus_repartition(consensus_df: pd.DataFrame, graph_name: str, number_agents: int, res_dir_path: Path, wrong_response=False) -> None:
+    ''' Save the consensus repartition in res_dir_path location. The program creates a .png image and a .csv file. 
+    res_dir_path should lead to a directory, not to a file.
     '''
-        Save the consensus repartition in res_dir_path location. The
-    programm create a .png image and a .csv file.
-    res_dir_path should lead to a repertory, not to a file.
-    '''
-    # csv
+    # Ensure the directory exists
     Path(res_dir_path).mkdir(parents=True, exist_ok=True)
-    if not wrong_response:
-        consensus_df.to_csv(res_dir_path / f'consensus.csv',
-                            mode = 'w',
-                            sep = ',',
-                            index=False)
-    else:
-        consensus_df.to_csv(res_dir_path / f'consensus_wrong_response.csv',
-                            mode = 'w',
-                            sep = ',',
-                            index=False)
-                
-    # consensus
-    g = sns.displot(consensus_df, x="correct_prop")
-    # g.set_theme(rc={'figure.figsize':(11.7,8.27)})
-    g.set(title=f"Average Consensus per Question for {number_agents} Agents\nin {graph_name}")
-    g.set_axis_labels("Consensus (proportion of correct answers)", "Frequency (%)")
-    if not wrong_response:
-        plt.savefig(res_dir_path / f'consensus.png')
-    else:
-        plt.savefig(res_dir_path / f'consensus_wrong_response.png')
+    
+    # Save CSV
+    csv_filename = 'consensus.csv' if not wrong_response else 'consensus_wrong_response.csv'
+    consensus_df.to_csv(res_dir_path / csv_filename, mode='w', sep=',', index=False)
 
-    # simpson
-    plt.figure(figsize=(16, 9))
-    sns.displot(consensus_df, x="simpson")
-    plt.title(f"Average Simpson Consensus per Question for {number_agents} Agents\nin {graph_name}")
-    plt.xlabel("Simpson probability")
-    plt.ylabel("Frequency (%)")
+    # Plot for correct_prop
+    plt.figure(figsize=(10, 8))
+    sns.histplot(consensus_df, x="correct_prop", color='#377eb8', stat='probability',alpha=1)
+    plt.title(f"Proportion of Agents Correct per Question", fontsize=24)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    title = "Proportion of Agents Correct"
+    if wrong_response:
+        title += " (Incorrect Answers)"
+    plt.xlabel(title, fontsize=20)
+    plt.ylabel("Relative Frequency", fontsize=20)
+    plt.xlim(0,1)
+    plt.tight_layout()
+    correct_prop_filename = 'correct_prop.png' if not wrong_response else 'correct_prop_wrong_responses.png'
+    plt.savefig(res_dir_path / correct_prop_filename, dpi=300)
+    plt.close()
 
-    if not wrong_response:
-        plt.savefig(res_dir_path / f'simpson.png')
-    else:
-        plt.savefig(res_dir_path / f'simpson_wrong_responses.png')
-    plt.close('all')
+    # Plot for simpson
+    plt.figure(figsize=(10, 8))
+    sns.histplot(consensus_df, x="simpson", color='#377eb8', stat='probability',alpha=1)
+    title = "Simpson Index $\\lambda$ per Question"
+    if wrong_response:
+        title += " (Incorrect Answers)"
+    plt.xlabel(title, fontsize=20)
+    plt.title(title, fontsize=24)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.xlabel("Simpson Index $\\lambda$", fontsize=20)
+    plt.ylabel("Relative Frequency", fontsize=20)
+    plt.xlim(0.2,1)
+    plt.tight_layout()
+    simpson_filename = 'simpson.png' if not wrong_response else 'simpson_wrong_responses.png'
+    plt.savefig(res_dir_path / simpson_filename, dpi=300)
+    plt.close()
 
 def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path, graph_names: dict[str, str], graph_colors: dict[str, str]) -> None:
     '''
@@ -283,7 +288,6 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     combined_csv_path = Path(output_dir) / 'accuracy_and_round.csv'
     results_df.to_csv(combined_csv_path, index=False)
 
-
     plt.figure(figsize=(12, 8))
     sns.set_style("white")
 
@@ -315,11 +319,12 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
 
 def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
 
-    consensus_types = {'correct_prop': 'Consensus to Correct Answer', 'simpson': 'Simpson Consensus'}
+    consensus_types = {'correct_prop': 'Percentage of Agents that Answered Correctly', 'simpson': 'Simpson Index $\\lambda$'}
 
     for consensus_type, consensus_label in consensus_types.items():
 
         results_df = pd.DataFrame(columns=['network', consensus_type, 'standard_error'])
+
         csv_files = glob.glob(input_file_path, recursive=True)
 
         for csv_file in csv_files:
@@ -329,23 +334,32 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
             results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
 
         results_path = Path(output_dir) / f'{consensus_type}_and_bias.csv'
+
+        custom_order = ['correct_bias_hub', 'correct_bias_edge', 'unbiased', 'incorrect_bias_edge', 'incorrect_bias_hub']
+        results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
+        results_df = results_df.sort_values(by='network_order')
+
         results_df.to_csv(results_path, index=False)
 
         network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
         plt.figure(figsize=(12, 8))
         plt.bar(range(len(results_df['network'])), results_df[consensus_type]*100, yerr=results_df['standard_error']*100, capsize=5, color=network_colors)
         plt.xlabel('Network Type', fontsize=20)
-        plt.ylabel(f'{consensus_label}', fontsize=20)
+        plt.ylabel(f'{consensus_label} (%)', fontsize=20)
         plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], rotation=45, ha="right", fontsize=16)
         plt.yticks(fontsize=16)
         plt.ylim(0,100)
-        plt.title(f'{consensus_label} vs Bias Type', fontsize=24)
+        plt.title(f'{consensus_label}', fontsize=24)
         plt.tight_layout()
+        print(f"Saving plot to {output_dir}")
         plt.savefig(Path(output_dir) / f'{consensus_type}_vs_bias.png', dpi=300, bbox_inches='tight')
 
 def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
 
-    consensus_types = {'correct_prop': 'Consensus of Incorrect Answers', 'simpson': 'Simpson Consensus of Incorrect Answers'}
+    consensus_types = {
+        'correct_prop': 'Consensus of Incorrect Answers',
+        'simpson': 'Average Simpson Index $\\lambda$ (Incorrect Answers)'
+    }
 
     for consensus_type, consensus_label in consensus_types.items():
 
@@ -358,6 +372,10 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
             sem = df.std() / np.sqrt(len(df))
             results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
 
+        custom_order = ['correct_bias_hub', 'correct_bias_edge', 'unbiased', 'incorrect_bias_edge', 'incorrect_bias_hub']
+        results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
+        results_df = results_df.sort_values(by='network_order')
+
         results_path = Path(output_dir) / f'{consensus_type}_incorrect_and_bias.csv'
         results_df.to_csv(results_path, index=False)
 
@@ -365,11 +383,15 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
         plt.figure(figsize=(12, 8))
         plt.bar(range(len(results_df['network'])), results_df[consensus_type], yerr=results_df['standard_error'], capsize=5, color=network_colors)
         plt.xlabel('Network Type', fontsize=20)
-        plt.ylabel(f'{consensus_label}', fontsize=20)
+
+        if consensus_type == 'simpson':
+            plt.ylabel(f'Simpson Index $\\lambda$', fontsize=20)
+        else:
+            plt.ylabel(f'{consensus_label}', fontsize=20)
         plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], rotation=45, ha="right", fontsize=16)
         plt.yticks(fontsize=16)
         plt.ylim(0,1)
-        plt.title(f'{consensus_label} vs Bias Type',)
+        plt.title(f'{consensus_label} vs Bias Type', fontsize=24)
         plt.tight_layout()
         plt.savefig(Path(output_dir) / f'{consensus_type}_incorrect_vs_bias.png', dpi=300, bbox_inches='tight')        
 
@@ -388,10 +410,10 @@ def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: 
 
     # KDE plot for the distribution of proportion of correct neighbors, split by correctness
     # The `clip` parameter restricts the range of the KDE to [0, 1]
-    sns.kdeplot(data=df, x='proportion_neighbors_correct', hue='correct', fill=True, common_norm=False, palette=custom_palette, alpha=0.5, linewidth=0, clip=(0, 1))
+    sns.kdeplot(data=df, x='proportion_neighbors_correct', hue='correct', fill=True, common_norm=False, palette=custom_palette, alpha=0.4, linewidth=1, clip=(0, 1))
     
     plt.title('Agent Correctness by Proportion of Neighbours Correct',  fontsize=24)
-    plt.xlabel('Proportion of Correct Neighbours Correct', fontsize=20)
+    plt.xlabel('Proportion of Neighbours Correct', fontsize=20)
     plt.ylabel('Density', fontsize=20)
     plt.yticks(fontsize=16)
     plt.xticks(fontsize=16)
@@ -400,7 +422,6 @@ def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: 
     
     plt.tight_layout()
     plt.savefig(f"{res_dir_path}neighbours_accuracy.png", dpi=300)
-
 
 def created_gifs(parsed_agent_response: pd.DataFrame,
                  graphml_path: Path,
