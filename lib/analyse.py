@@ -11,7 +11,12 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None
 
-def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str, str], graph_colors: dict[str, str], gifs = False) -> Tuple[Path, str, int, str]:
+def analyse_simu(agent_response: Path, 
+                 analyse_dir: Path, 
+                 graphs_path: Path,
+                 graph_names: dict[str, str], 
+                 graph_colors: dict[str, str], 
+                 gifs = False) -> Tuple[Path, str, int, str]:
     '''
         Analyse the respones of agents from a single simulation run.
 
@@ -55,7 +60,7 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str,
 
     # Get correctness by proportion of correct neighbours
     visu.opinion_changes(opinion_changes, network_bias, final_res_path, graph_names, graph_colors)
-    calculate_proportion_neighbours_correct(agent_parsed_resp, graph_type, final_res_path)
+    calculate_proportion_neighbours_correct(agent_parsed_resp, graphs_path, final_res_path)
 
     # Figs
     if gifs:
@@ -173,14 +178,14 @@ def find_evolutions(parsed_agent_response : pd.DataFrame) -> pd.DataFrame :
 
     return final_changes
 
-def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame, graph_type: str, final_res_path: Path) -> pd.DataFrame:
+def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame, graphml_file: Path, final_res_path: Path) -> pd.DataFrame:
     """
     Calculate the proportion of neighbors that were correct in the previous round for each agent in unbiased responses,
     separately for each round, question number, and repeat, and merge this data back into the original DataFrame.
     
     Args:
         parsed_agent_response (pd.DataFrame): DataFrame containing agents' responses and metadata.
-        graph_type (str): The type of graph to load (defines the directory of GraphML files).
+        graphml_path (Path): The file containing graphs to load (defines the directory of GraphML files).
         final_res_path (Path): The path to save the final results.
         
     Returns:
@@ -194,7 +199,7 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
 
     # Iterate over each unique combination of network number, round, question number, and repeat
     for (network_num, round_, question_number, repeat), df_group in df.groupby(['network_number', 'round', 'question_number', 'repeat']):
-        graphml_path = Path(f'data/{graph_type}/{network_num}.graphml')
+        graphml_path = graphml_file / f'{network_num}.graphml'
         G = nx.read_graphml(graphml_path)
         
         # Check if the previous round exists

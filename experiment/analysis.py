@@ -14,7 +14,7 @@ import lib.visualize as visu
 
 AGENT_RESPONSES_REP = 'output/agent_responses/'
 OUTPUT_ANALYSIS_REP = "output/analysis/"
-
+GRAPHS_PATH = 'experiment/data/scale_free_network/'
 OUTPUT_PATH = 'output/'
 COMBINED_ANALYSIS_PATH = f"{OUTPUT_PATH}combined/analysis/"
 
@@ -39,11 +39,13 @@ def main():
     csv_files = glob(f'{OUTPUT_PATH}**/agent_responses/**/*.csv', recursive=True)
 
     for file in csv_files:
+        print(file)
         analyse.analyse_simu(agent_response= Path(file), 
-                                        analyse_dir= Path(file).parent.parent.parent / "analysis/",
-                                        graph_names=GRAPH_NAMES,
-                                        graph_colors=GRAPH_COLORS,
-                                        gifs = False)
+                            analyse_dir= Path(file).parent.parent.parent / "analysis/",
+                            graphs_path= Path(GRAPHS_PATH),
+                            graph_names=GRAPH_NAMES,
+                            graph_colors=GRAPH_COLORS,
+                            gifs = False)
         
 
     visu.accuracy_vs_bias(f"{OUTPUT_PATH}**/analysis/**/accuracy_per_network_and_repeat.csv", COMBINED_ANALYSIS_PATH, GRAPH_NAMES, GRAPH_COLORS)
@@ -54,7 +56,7 @@ def main():
 
     visu.consensus_incorrect_vs_bias(f"{OUTPUT_PATH}**/analysis/**/consensus_wrong_response.csv", COMBINED_ANALYSIS_PATH, GRAPH_NAMES, GRAPH_COLORS)
 
-    visu.neighbours_accuracy(f"{OUTPUT_PATH}**/analysis/**/proportion_neighbors_correct.csv", COMBINED_ANALYSIS_PATH, GRAPH_COLORS)
+    visu.neighbours_accuracy(f"{OUTPUT_PATH}**/analysis/**/proportion_neighbors_correct_previous_round.csv", COMBINED_ANALYSIS_PATH, GRAPH_COLORS)
 
     return
 
