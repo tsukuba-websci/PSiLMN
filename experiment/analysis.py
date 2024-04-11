@@ -40,8 +40,10 @@ def main():
 
     for file in csv_files:
         analyse.analyse_simu(agent_response= Path(file), 
-                                        analyse_dir= Path(file).parent.parent.parent / "analysis/", 
-                                        figs = False)
+                                        analyse_dir= Path(file).parent.parent.parent / "analysis/",
+                                        graph_names=GRAPH_NAMES,
+                                        graph_colors=GRAPH_COLORS,
+                                        gifs = False)
         
 
     visu.accuracy_vs_bias(f"{OUTPUT_PATH}**/analysis/**/accuracy_per_network_and_repeat.csv", COMBINED_ANALYSIS_PATH, GRAPH_NAMES, GRAPH_COLORS)
@@ -51,6 +53,8 @@ def main():
     visu.consensus_vs_bias(f"{OUTPUT_PATH}**/analysis/**/consensus.csv", COMBINED_ANALYSIS_PATH, GRAPH_NAMES, GRAPH_COLORS)
 
     visu.consensus_incorrect_vs_bias(f"{OUTPUT_PATH}**/analysis/**/consensus_wrong_response.csv", COMBINED_ANALYSIS_PATH, GRAPH_NAMES, GRAPH_COLORS)
+
+    visu.neighbours_accuracy(f"{OUTPUT_PATH}**/analysis/**/proportion_neighbors_correct.csv", COMBINED_ANALYSIS_PATH, GRAPH_COLORS)
 
     return
 
