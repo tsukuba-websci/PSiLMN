@@ -12,10 +12,8 @@ import seaborn as sns
 import glob
 import os
 import numpy as np
+import lib.analyse as analyse
 
-from pathlib import Path
-import glob
-import numpy as np
 from pathlib import Path
 
 ### Single simulation plot
@@ -401,8 +399,15 @@ def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: 
 
     df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
 
+    # tables (data of the graph)
+    results_path = Path(res_dir_path)
+    count_table, prob_table = analyse.neighbours_accuracy_tables(df)
+    count_table.to_csv(Path(res_dir_path) / 'neighbours_accuracy_count_table.csv', index = False)
+    prob_table.to_csv(Path(res_dir_path) / 'neighbours_accuracy_proba_table.csv', index = False)
+
     # filter round not equal to 1
     df = df[df['round'] != 0] 
+
 
     df['correct'] = df['correct'].astype('category')
     

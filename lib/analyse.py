@@ -57,9 +57,9 @@ def analyse_simu(agent_response: Path,
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
+    visu.opinion_changes(opinion_changes, network_bias, final_res_path, graph_names, graph_colors)
 
     # Get correctness by proportion of correct neighbours
-    visu.opinion_changes(opinion_changes, network_bias, final_res_path, graph_names, graph_colors)
     calculate_proportion_neighbours_correct(agent_parsed_resp, graphs_path, final_res_path)
 
     # Figs
@@ -211,6 +211,9 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
             for agent_id_str in df_group['agent_id_str'].unique():
                 if agent_id_str in G:
                     neighbors = list(G.neighbors(agent_id_str))
+                    # Find the agent previous answer
+                    previous_resp = df_previous_round.query(f"agent_id == {agent_id_str}")['correct'].iloc[0]
+
                     # Filter for neighbors' correctness in the previous round
                     df_neighbors_previous_round = df_previous_round[df_previous_round['agent_id_str'].isin(neighbors)]
                     proportion_correct_previous_round = df_neighbors_previous_round['correct'].mean() if not df_neighbors_previous_round.empty else None
@@ -223,6 +226,7 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
                     'round': round_,
                     'question_number': question_number,
                     'repeat': repeat,
+                    'previous_response': previous_resp,
                     'proportion_neighbors_correct_previous_round': proportion_correct_previous_round
                 })
     
@@ -237,6 +241,22 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
     df_final.to_csv(final_res_path / 'proportion_neighbors_correct_previous_round.csv', index=False)
 
     return df_final
+
+def neighbours_accuracy_tables(parsed_agent_response: pd.DataFrame) -> None:
+    # filter round not equal to 1
+    df = parsed_agent_response[parsed_agent_response['round'] != 0] 
+
+    proportions = [[0., 0.1], [0.1, 0.45], [0.45, 0.55], [0.55, 0.95], [0.95, 1.1]]
+    count_table = pd.DataFrame(data = [True, False], columns=['previous_opinion'])
+    proba_table = pd.DataFrame(data = [True, False], columns=['previous_opinion'])
+
+    for [min, max] in proportions: 
+        sample = df.query(f'proportion_neighbors_correct_previous_round >= {min} & proportion_neighbors_correct_previous_round < {max}')
+        count = sample.groupby('previous_response').size()
+        proba = sample.groupby(['previous_response'])['correct'].mean()
+        count_table[f'{min}_{max}'] = count
+        proba_table[f'{min}_{max}'] = proba
+    return count_table, proba_table
 
 def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, network_bias: str) -> pd.DataFrame :
     '''
