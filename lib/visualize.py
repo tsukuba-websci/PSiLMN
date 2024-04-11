@@ -401,8 +401,12 @@ def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: 
 
     df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
 
+    # filter round not equal to 1
+    df = df[df['round'] != 0] 
+
     df['correct'] = df['correct'].astype('category')
     
+
     # Prepare the plot
     plt.figure(figsize=(12, 8))
 
@@ -410,7 +414,7 @@ def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: 
 
     # KDE plot for the distribution of proportion of correct neighbors, split by correctness
     # The `clip` parameter restricts the range of the KDE to [0, 1]
-    sns.kdeplot(data=df, x='proportion_neighbors_correct', hue='correct', fill=True, common_norm=False, palette=custom_palette, alpha=0.4, linewidth=1, clip=(0, 1))
+    sns.kdeplot(data=df, x='proportion_neighbors_correct', hue='correct', fill=False, common_norm=False, palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
     
     plt.title('Agent Correctness by Proportion of Neighbours Correct',  fontsize=24)
     plt.xlabel('Proportion of Neighbours Correct', fontsize=20)
