@@ -187,7 +187,7 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
         pd.DataFrame: The original DataFrame with an added column for the proportion of correct neighbors from the previous round.
     """
     # Filter for unbiased responses
-    df = parsed_agent_response.query("bias == 'unbiased'").copy()
+    df = parsed_agent_response.copy()
     df['agent_id_str'] = df['agent_id'].astype(str)  # Convert agent_id to string once
 
     new_data = []
