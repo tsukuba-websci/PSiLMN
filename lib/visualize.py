@@ -402,7 +402,8 @@ def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: 
     df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
 
     # filter round not equal to 1
-    df = df[df['round'] != 0] 
+    df = df[df['round'] != 0]
+    df = df.query("bias == 'unbiased'").copy()
 
     df['correct'] = df['correct'].astype('category')
     
