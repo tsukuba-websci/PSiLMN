@@ -83,7 +83,7 @@ def save_network(graph: nx.Graph, index: int, title: str, network_type: str) -> 
         network_type (str): The type of the network (e.g., scale_free, random, fully_connected, fully_disconnected).
     """
 
-    location = f"data/{network_type}"
+    location = f"input/{network_type}"
     os.makedirs(location, exist_ok=True)
 
     # Save the graph as graphml
