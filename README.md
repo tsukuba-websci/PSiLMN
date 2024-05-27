@@ -1,6 +1,6 @@
-# MultiAgentNetworkSimulation
+# Problem Solving in Language Model Networks
 
-This project implements a multi-agent network simulation.
+This repository contains the code for the paper "Problem Solving in Language Model Networks" which was accepted at the [2024 Conference on Artificial Life](https://2024.alife.org/).
 
 ## Getting Started
 
@@ -26,10 +26,17 @@ poetry run pytest
 ```
 
 ## Running the Experiment
-To run the experiment, use the following command.
+First, `cd` into the `experiment` directory.
+
+The specific networks used in the paper are already included in `/input` directory, however, new networks can be generated using the `generate_networks.py` script, if required.
 
 ```
-cd experiment
+poetry run python generate_networks.py
+```
+
+To run the problem solving experiment, run the `main.py` script.
+
+```
 poetry run python main.py
 ```
 
