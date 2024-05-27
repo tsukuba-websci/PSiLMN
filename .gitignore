@@ -7,4 +7,5 @@
 *.gif
 /output
 temp.py
-experiment/output/**/*.png
+*.png
+!/experiment/data/**/*.png
