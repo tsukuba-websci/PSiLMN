@@ -136,10 +136,10 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path
 
     # Define the custom palette and the order of the hues
     custom_palette = {
-        "I $\\rightarrow$ I": graph_colors['incorrect_bias_hub'],
-        "C $\\rightarrow$ C": graph_colors['correct_bias_hub'],
-        "I $\\rightarrow$ C": graph_colors['correct_bias_edge'],
-        "C $\\rightarrow$ I": graph_colors['incorrect_bias_edge']
+        "I $\\rightarrow$ I": graph_colors['scale_free_incorrect_hub'],
+        "C $\\rightarrow$ C": graph_colors['scale_free_correct_hub'],
+        "I $\\rightarrow$ C": graph_colors['scale_free_correct_edge'],
+        "C $\\rightarrow$ I": graph_colors['scale_free_incorrect_edge']
     }
     hue_order = ["C $\\rightarrow$ C", "I $\\rightarrow$ I", "I $\\rightarrow$ C", "C $\\rightarrow$ I"]
     df_opinion_evol['Answer Change'] = df_opinion_evol['Answer Change'].replace({
@@ -335,7 +335,7 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
 
         results_path = Path(output_dir) / f'{consensus_type}_and_bias.csv'
 
-        custom_order = ['correct_bias_hub', 'correct_bias_edge', 'unbiased', 'incorrect_bias_edge', 'incorrect_bias_hub']
+        custom_order = ['scale_free_correct_hub', 'scale_free_correct_edge', 'scale_free_unbiased', 'scale_free_incorrect_edge', 'scale_free_incorrect_hub']
         results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
         results_df = results_df.sort_values(by='network_order')
 
@@ -372,7 +372,7 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
             sem = df.std() / np.sqrt(len(df))
             results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
 
-        custom_order = ['correct_bias_hub', 'correct_bias_edge', 'unbiased', 'incorrect_bias_edge', 'incorrect_bias_hub']
+        custom_order = ['scale_free_correct_hub', 'scale_free_correct_edge', 'scale_free_unbiased', 'scale_free_incorrect_edge', 'scale_free_incorrect_hub']
         results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
         results_df = results_df.sort_values(by='network_order')
 

@@ -11,7 +11,11 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None
 
-def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str, str], graph_colors: dict[str, str], gifs = False) -> Tuple[Path, str, int, str]:
+def analyse_simu(agent_response: Path, 
+                analyse_dir: Path,
+                graph_names,
+                graph_colors,
+                gifs = False) -> Tuple[str, int, str]:
     '''
         Analyse the respones of agents from a single simulation run.
 
@@ -21,7 +25,6 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str,
             figs: Boolean to determine if the figures should be created or not.
 
         Returns:
-            final_res_path: Path to the directory where the analysis results are saved.
             graph_type: The type of graph used in the simulation.
             num_agents: The number of agents in the simulation.
             network_bias: The type of network bias used in the simulation.
@@ -30,76 +33,79 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str,
     # Parse the file name
     num_agents, graph_type, network_bias = parse_file_path(agent_response)
 
-    # Create the final result directory
-    final_res_path = analyse_dir / f'{network_bias}/'
-    final_res_path.mkdir(parents=True, exist_ok=True)
+    # Create the final result directories
+    analyse_dir.mkdir(parents=True, exist_ok=True)
 
     # Parse the agent response
-    agent_parsed_resp = parse.parse_output_mmlu(agent_response, final_res_path / 'agent_response_parsed.csv')
-    network_responses_df = parse.get_network_responses(agent_parsed_resp, final_res_path / 'network_responses.csv')
+    agent_parsed_resp = parse.parse_output_mmlu(agent_response,
+                                                analyse_dir / f'parsed_responses/{agent_response.name}.csv')
+    network_responses_df = parse.get_network_responses(agent_parsed_resp, analyse_dir / f'network_responses/{agent_response.name}.csv')
 
-    # Analyse the responses
-    
+    # Analyse the responses of this configuration
+    fig_path = analyse_dir / f'figs/{agent_response.name}/'
+    Path(fig_path).mkdir(exist_ok=True)
     # Accuracy
     visu.accuracy_repartition(network_responses_df,
-                              network_bias,
+                              f'{network_bias}',
                               num_agents,
-                              final_res_path)
+                              fig_path)
 
     # Consensus
-    consensus_df = calculate_consensus_per_question(agent_parsed_resp,network_bias)
-    visu.consensus_repartition(consensus_df, graph_type, num_agents, final_res_path)
+    consensus_df = calculate_consensus_per_question(agent_parsed_resp)
+    visu.consensus_repartition(consensus_df, graph_type, num_agents, fig_path)
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
+    visu.opinion_changes(opinion_changes, graph_type, fig_path, graph_names, graph_colors)
 
-    # Get correctness by proportion of correct neighbours
-    visu.opinion_changes(opinion_changes, network_bias, final_res_path, graph_names, graph_colors)
-    calculate_proportion_neighbours_correct(agent_parsed_resp, graph_type, final_res_path)
+    # Neighbors
+    # calculate_proportion_neighbours_correct(agent_parsed_resp, graph_type, fig_path)
 
     # Figs
     if gifs:
-        for network_num in range(3):
-            graphml_path = Path(f'data/{graph_type}/{network_num}.graphml')
-            visu.created_gifs(agent_parsed_resp, graphml_path, final_res_path / f'gifs/{network_num}/', network_num= network_num, graph_colors= graph_colors)
+        graphml_path = Path(f'experiment/data/{graph_type}/{num_agents}.graphml')
+        visu.created_figs(agent_parsed_resp, graphml_path, fig_path / f'{agent_response.name}/gifs/')
 
     # Wrong response consensus
     agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp,
                                                              network_responses_df)
-    consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses, network_bias)
+    consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses)
     visu.consensus_repartition(consensus_df,
                                f'{graph_type} (wrong ansers only)',
                                num_agents,
-                               final_res_path,
+                               fig_path,
                                wrong_response= True)
 
-    return final_res_path, graph_type, num_agents, network_bias
+    return graph_type, num_agents, network_bias
 
-def parse_file_path(file_path : Path) -> Tuple[int, str, str]:
+def parse_file_path(dir_path : Path) -> Tuple[int, str, str]:
     '''
         Parse the file_path to determine the number of agents, the network bias the network type.
 
         Args:
-            file_path: Path to the agent response CSV file.
+            dir_path: Path to the agent response directory.
 
         Returns:
-            num_agents: The number of agents in the simulation.
+            number of agent: The number of agent in the simulation.
             graph_type: The type of graph used in the simulation.
             network_bias: The type of network bias used in the simulation.
     '''
-    num_agents = int(file_path.name.split('.')[0])
+    num_agents = 25 # fixed for this paper
 
-    graph_type = "scale_free_network"
-
+    graph_type = dir_path.name
     network_bias = "unbiased"
-    if ("incorrect" in str(file_path)) and ("hub" in str(file_path)):
-        network_bias = "incorrect_bias_hub"
-    elif ("incorrect" in str(file_path)) and ("edge" in str(file_path)):
-        network_bias = "incorrect_bias_edge"
-    elif ("correct" in str(file_path)) and ("hub" in str(file_path)):
-        network_bias = "correct_bias_hub"
-    elif ("correct" in str(file_path)) and ("edge" in str(file_path)):
-        network_bias = "correct_bias_edge"
+
+    if 'scale_free' in dir_path.name:
+        network_bias = "unbiased"
+        if "incorrect" in dir_path.name and "hub" in dir_path.name:
+            network_bias = "incorrect_hub"
+        elif "incorrect" in dir_path.name and "edge" in dir_path.name:
+            network_bias = "incorrect_edge"
+        elif "correct" in dir_path.name and "hub" in dir_path.name:
+            network_bias = "correct_hub"
+        elif "correct" in dir_path.name and "edge" in dir_path.name:
+            network_bias = "correct_edge"
+        graph_type = f'scale_free_{network_bias}'
 
     return num_agents, graph_type, network_bias
 
@@ -233,7 +239,7 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
 
     return df_final
 
-def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, network_bias: str) -> pd.DataFrame :
+def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.DataFrame :
     '''
         Returns consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
 
@@ -243,13 +249,10 @@ def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, networ
         Returns:
             final_consensus: The consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
     '''
-
-    biased = True if 'unbiased' not in network_bias else False
-
     # Read the CSV file
     df = parsed_agent_response.query("bias == 'unbiased'")
 
-    num_agent = 23 if biased else 25
+    num_agent = df['agent_id'].unique().size
     last_round = df['round'].unique().max()
 
     # We select only the correct responses in the last round and remove unecessary columns 

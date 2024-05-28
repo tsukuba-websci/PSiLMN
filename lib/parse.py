@@ -4,6 +4,7 @@
 import re
 import pandas as pd
 
+from glob import glob
 from pathlib import Path
 from random import shuffle
 from typing import Optional
@@ -27,40 +28,57 @@ def parse_response_mmlu(response: str) -> Optional[str]:
 
     return answer
 
-def parse_output_mmlu(csv_file_to_parse: Path, res_file_path: Path) -> pd.DataFrame:
+def parse_output_mmlu(output_dir_path: Path, res_file_path: Path) -> pd.DataFrame:
     """
-        Parse agent response csv file to analyse which answer is correct and which is not.
+        Parse agent response csv files to analyse which answer is correct and which is not.
     Save the result in res_file_path. res_file_path should be in an existing repository.
     res_file_path should contain the file name and extension.
     Return the panda dataFrame.
     """
-    df = pd.read_csv(csv_file_to_parse, delimiter='|')
-    df = df.query("bias == 'none'")
+    # list of all csv files
+    csv_files_to_parse = [Path(str_path) for str_path in glob(f'{str(output_dir_path)}/*.csv', recursive=False)]
 
-    # Analyse responses to find the correct ones
+    # Delete previous file and write headers
+    with open(res_file_path, mode="w+") as f:
+        f.write('network_number|agent_id|round|question_number|repeat|parsed_response|correct_response|correct|bias\n')
+    
+    for csv_file_to_parse in csv_files_to_parse:
+        # load data from file name
+        string_name_splited = csv_file_to_parse.name.split(sep = '.')[0].split(sep = '_')
+        network_number, repeat = string_name_splited[2], string_name_splited[4]
 
-    df['parsed_response'] = df['response'].apply(parse_response_mmlu)
-    df['correct'] = df['parsed_response'] == df['correct_response']
+        # load data from file
+        df = pd.read_csv(csv_file_to_parse, delimiter='|')
+        df = df.query("bias == 'none'")
 
-    # If parsed response is not in the possible answers, we set parsed response as X
-    df['parsed_response'] = df['parsed_response'].apply(lambda string: 
-                                                        string if string in ['A', 'B', 'C', 'D'] 
-                                                        else 'X')
-    # We harmonize bias column
-    if "bias" in df.columns :
-        df['bias'] = df['bias'].apply(lambda bias : 
-                                      bias if bias in ['correct', 'incorrect'] 
-                                      else "unbiased")
-    else:
-        df['bias'] = "unbiased"
+        # Analyse responses to find the correct ones
 
-    # Remove useless columns
-    df = df[['network_number', 'agent_id', 'round', 'question_number', 'repeat', 'parsed_response', 'correct_response', 'correct', 'bias']]
+        df['parsed_response'] = df['response'].apply(parse_response_mmlu)
+        df['correct'] = df['parsed_response'] == df['correct_response']
 
-    # Save the file
-    df.to_csv(res_file_path, mode='w', sep='|', index=False)
+        # If parsed response is not in the possible answers, we set parsed response as X
+        df['parsed_response'] = df['parsed_response'].apply(lambda string: 
+                                                            string if string in ['A', 'B', 'C', 'D'] 
+                                                            else 'X')
+        # We harmonize bias column
+        if "correct" in csv_file_to_parse.name :
+            df['bias'] = df['bias'].apply(lambda bias : 
+                                        bias if bias in ['correct', 'incorrect'] 
+                                        else "unbiased")
+        else:
+            df['bias'] = "unbiased"
 
-    return df
+        # Add repeat and network_number
+        df['network_number'] = network_number
+        df['repeat'] = repeat
+
+        # Remove useless columns
+        df = df[['network_number', 'agent_id', 'round', 'question_number', 'repeat', 'parsed_response', 'correct_response', 'correct', 'bias']]
+
+        # Save the file
+        df.to_csv(res_file_path, mode='a', sep='|', index=False, header=False)
+
+    return pd.read_csv(res_file_path, delimiter='|')
 
 def get_network_responses(parsed_agent_response: pd.DataFrame | Path, res_file_path: Path) -> pd.DataFrame:
     '''
