@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     # Save all the networks
     for index, network in enumerate(scale_free_networks):
-        save_network(graph=network, index=index, title=f"Scale Free Network {index}", network_type="scale_free")
+        save_network(graph=network, index=index, title=f"Scale-Free Network {index}", network_type="scale_free")
     for index, network in enumerate(random_networks):
         save_network(graph=network, index=index, title=f"Random Network {index}", network_type="random")
     for index, network in enumerate(fully_connected_networks):

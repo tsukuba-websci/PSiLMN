@@ -12,7 +12,6 @@ import seaborn as sns
 import glob
 import os
 import numpy as np
-
 from pathlib import Path
 import glob
 import numpy as np
@@ -71,12 +70,7 @@ def accuracy_repartition(network_responses : pd.DataFrame,
 
     return
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
-import pandas as pd
-
-def consensus_repartition(consensus_df: pd.DataFrame, graph_name: str, number_agents: int, res_dir_path: Path, wrong_response=False) -> None:
+def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, wrong_response=False) -> None:
     ''' Save the consensus repartition in res_dir_path location. The program creates a .png image and a .csv file. 
     res_dir_path should lead to a directory, not to a file.
     '''
@@ -236,8 +230,8 @@ def consensus_vs_graph(consensus_path: Path,
         plt.savefig(res_file_path / res_file)
         plt.close('all')
 
-def accuracy_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
-    ''' Plot the accuracy vs bias comparison between graphs. The program creates a .png image and saves it to the output directory. Additionally, now it saves the accuracy and standard error for each csv file into a new csv file. '''
+def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
+    ''' Plot the accuracy vs bias comparison between graphs. The program creates a .png image and saves it to the output directory. Additionally, it saves the accuracy and standard error for each csv file into a new csv file. '''
 
     results_df = pd.DataFrame(columns=['network', 'accuracy', 'standard_error'])
     
@@ -246,40 +240,76 @@ def accuracy_vs_bias(input_file_path: str, output_dir: str, human_readable_label
     for csv_file in csv_files:
         df = pd.read_csv(csv_file)['accuracy']
         mean = df.mean()
-        sem = df.std() / np.sqrt(len(df))
+        standard_error = df.std() / np.sqrt(len(df))
 
         # Append results
-        results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name],
-                                                          'accuracy': mean,
-                                                          'standard_error': sem})], ignore_index=True)
+        new_data = pd.DataFrame({
+            'network': [Path(csv_file).parent.name],
+            'accuracy': mean,
+            'standard_error': standard_error
+        })
+
+        results_df = pd.concat([results_df if not results_df.empty else None, new_data], ignore_index=True)
 
     # Save the results to a new CSV file
     results_df.sort_values(by='accuracy', ascending=False, inplace=True)
 
-    results_path = Path(output_dir) / 'accuracy_and_bias.csv'
+    results_path = Path(output_dir) / 'accuracy_and_network.csv'
     results_df.to_csv(results_path, index=False)
 
-    network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
+    # Define categories for unbiased and biased networks
+    unbiased_networks = ['scale_free_unbiased', 'random', 'fully_connected', 'fully_disconnected']
+    biased_networks = ['scale_free_correct_hub', 'scale_free_incorrect_hub', 'scale_free_correct_edge', 'scale_free_incorrect_edge', 'scale_free_unbiased']
 
-    plt.figure(figsize=(12, 8))
-    plt.bar(results_df['network'], results_df['accuracy'] * 100, yerr=results_df['standard_error'] * 100, capsize=5, color=network_colors)
-    plt.xlabel('Network Type', fontsize=20)
-    plt.ylabel('Accuracy (%)', fontsize=20)
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.title('Accuracy vs Bias Type', fontsize=24)
+    # Function to plot graphs
+    def plot_accuracy_vs_network(results_df, networks, title, file_name, label_modifier=None):
+        filtered_df = results_df[results_df['network'].isin(networks)]
+        network_colors = [graph_colors.get(network, 'gray') for network in filtered_df['network']]
+        
+        plt.figure(figsize=(12, 8))
+        plt.bar(filtered_df['network'], filtered_df['accuracy'] * 100, yerr=filtered_df['standard_error'] * 100, capsize=5, color=network_colors)
+        plt.xlabel('Network Type', fontsize=20)
+        plt.ylabel('Accuracy (%)', fontsize=20)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.title(title, fontsize=24)
+        
+        # Modify labels if a modifier function is provided
+        if label_modifier:
+            labels = [label_modifier(human_readable_labels.get(network, network)) for network in filtered_df['network']]
+        else:
+            labels = [human_readable_labels.get(network, network) for network in filtered_df['network']]
+        
+        plt.xticks(range(len(filtered_df['network'])), labels, rotation=45, ha="right")
+        
+        plt.tight_layout()
+        plt.savefig(Path(output_dir) / file_name, dpi=300, bbox_inches='tight')
+        plt.close()
 
-    # Set the x-tick labels to the human-readable labels
-    plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(network, network) for network in results_df['network']], rotation=45, ha="right")
+    # Plot for unbiased networks
+    plot_accuracy_vs_network(
+        results_df,
+        unbiased_networks,
+        'Accuracy vs Network Type',
+        'accuracy_vs_network.png',
+        label_modifier=lambda x: 'Scale-Free' if 'Unbiased' in x else x
+    )
 
-    plt.tight_layout()
-    plt.savefig(Path(output_dir) / 'accuracy_vs_bias.png', dpi=300,bbox_inches='tight')
+    # Plot for biased networks
+    plot_accuracy_vs_network(
+        results_df,
+        biased_networks,
+        'Accuracy vs Bias Type in Scale-Free Networks',
+        'accuracy_vs_bias.png',
+        label_modifier=lambda x: 'Unbiased' if 'Scale-Free' in x else x
+    )
 
 def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
 
     csv_files = glob.glob(agent_responses_path, recursive=True)
     results_df = pd.DataFrame()
     for csv_file in csv_files:
+        print(csv_file)
         df = pd.read_csv(csv_file)
         df['network'] = Path(csv_file).parent.name
         results_df = pd.concat([results_df, df], ignore_index=True, sort=False)
@@ -291,11 +321,21 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     plt.figure(figsize=(12, 8))
     sns.set_style("white")
 
+    def format_label(network):
+        if 'correct' in network:
+            return f"Scale-Free (Correct Bias {network.split('_')[-1].capitalize()})"
+        elif 'incorrect' in network:
+            return f"Scale-Free (Incorrect Bias {network.split('_')[-1].capitalize()})"
+        elif 'unbiased' in network:
+            return 'Scale-Free (Unbiased)'
+        else:
+            return human_readable_labels.get(network, network)
+
     for network, group in results_df.groupby('network'):
         x = group['round']
         y = group['accuracy']*100
         custom_color = graph_colors.get(network, 'gray')
-        plt.plot(x+1, y, marker='o', markersize=5, label=network, linewidth=3, color=custom_color)  # Increase markersize and linewidth
+        plt.plot(x+1, y, marker='o', markersize=5, label=format_label(network), linewidth=3, color=custom_color)  # Increase markersize and linewidth
         plt.errorbar(x+1, y, yerr=group['standard_error']*100, fmt='none', capsize=5, elinewidth=2, ecolor='black')  # Increase capsize and elinewidth
 
     plt.xlabel('Round', fontsize=20)  # Increase fontsize
@@ -309,7 +349,7 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
 
     # Use the label_mapping for the legend
     handles, labels = plt.gca().get_legend_handles_labels()
-    new_labels = [human_readable_labels[label] for label in labels]
+    new_labels = [format_label(label) for label in labels]
     plt.legend(handles, new_labels, fontsize=14)  # Increase fontsize
     plt.tight_layout()
 
@@ -331,7 +371,7 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
             df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
             mean = df.mean()
             sem = df.std() / np.sqrt(len(df))
-            results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
+            results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
 
         results_path = Path(output_dir) / f'{consensus_type}_and_bias.csv'
 
@@ -351,7 +391,6 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
         plt.ylim(0,100)
         plt.title(f'{consensus_label}', fontsize=24)
         plt.tight_layout()
-        print(f"Saving plot to {output_dir}")
         plt.savefig(Path(output_dir) / f'{consensus_type}_vs_bias.png', dpi=300, bbox_inches='tight')
 
 def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
@@ -370,7 +409,7 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
             df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
             mean = df.mean()
             sem = df.std() / np.sqrt(len(df))
-            results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
+            results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
 
         custom_order = ['scale_free_correct_hub', 'scale_free_correct_edge', 'scale_free_unbiased', 'scale_free_incorrect_edge', 'scale_free_incorrect_hub']
         results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
@@ -395,38 +434,28 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
         plt.tight_layout()
         plt.savefig(Path(output_dir) / f'{consensus_type}_incorrect_vs_bias.png', dpi=300, bbox_inches='tight')        
 
-def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: dict[str, str]) -> None:
-    
+def neighbours_accuracy(input_file_path: str, output_file_path: str, graph_colours: dict[str, str]) -> None:
     csv_files = glob.glob(input_file_path, recursive=True)
-
     df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
 
-    # filter round not equal to 1
+    # Filter out the first round
     df = df[df['round'] != 0]
-    df = df.query("bias == 'unbiased'").copy()
 
+    # Filter out the biased agents
+    df = df.query("bias == 'unbiased'").copy()
     df['correct'] = df['correct'].astype('category')
     
-
-    # Prepare the plot
     plt.figure(figsize=(12, 8))
-
-    custom_palette = {True: graph_colours['correct_bias_hub'], False: graph_colours['incorrect_bias_hub']}  # Example: Blue for True, Orange for False
-
-    # KDE plot for the distribution of proportion of correct neighbors, split by correctness
-    # The `clip` parameter restricts the range of the KDE to [0, 1]
-    sns.kdeplot(data=df, x='proportion_neighbors_correct', hue='correct', fill=False, common_norm=False, palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
-    
+    custom_palette = {True: graph_colours['scale_free_correct_hub'], False: graph_colours['scale_free_incorrect_hub']}
+    sns.kdeplot(data=df, x='proportion_neighbors_correct_previous_round', hue='correct', fill=False, common_norm=False, palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
     plt.title('Agent Correctness by Proportion of Neighbours Correct',  fontsize=24)
     plt.xlabel('Proportion of Neighbours Correct', fontsize=20)
     plt.ylabel('Density', fontsize=20)
     plt.yticks(fontsize=16)
     plt.xticks(fontsize=16)
-
     plt.legend(title='Correctness', labels=['Correct', 'Incorrect'], fontsize=16, title_fontsize=16, loc='upper left')
-    
     plt.tight_layout()
-    plt.savefig(f"{res_dir_path}neighbours_accuracy.png", dpi=300)
+    plt.savefig(f"{output_file_path}neighbours_accuracy.png", dpi=300)
 
 def created_gifs(parsed_agent_response: pd.DataFrame,
                  graphml_path: Path,
@@ -506,7 +535,6 @@ def created_gifs(parsed_agent_response: pd.DataFrame,
                 images.append(image_path)
 
             gif_path = res_repertory_repeat / f'q{question}.gif'
-            print(f"Saving gif to {gif_path}")
             with imageio.get_writer(gif_path, mode='I', fps=1, loop=0) as writer:
                 for image_path in images:
                     image = imageio.v3.imread(image_path)
