@@ -12,7 +12,6 @@ import seaborn as sns
 import glob
 import os
 import numpy as np
-
 from pathlib import Path
 import glob
 import numpy as np
@@ -71,12 +70,7 @@ def accuracy_repartition(network_responses : pd.DataFrame,
 
     return
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pathlib import Path
-import pandas as pd
-
-def consensus_repartition(consensus_df: pd.DataFrame, graph_name: str, number_agents: int, res_dir_path: Path, wrong_response=False) -> None:
+def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, wrong_response=False) -> None:
     ''' Save the consensus repartition in res_dir_path location. The program creates a .png image and a .csv file. 
     res_dir_path should lead to a directory, not to a file.
     '''
@@ -249,7 +243,7 @@ def accuracy_vs_bias(input_file_path: str, output_dir: str, human_readable_label
         sem = df.std() / np.sqrt(len(df))
 
         # Append results
-        results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name],
+        results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name],
                                                           'accuracy': mean,
                                                           'standard_error': sem})], ignore_index=True)
 
@@ -331,7 +325,7 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
             df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
             mean = df.mean()
             sem = df.std() / np.sqrt(len(df))
-            results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
+            results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
 
         results_path = Path(output_dir) / f'{consensus_type}_and_bias.csv'
 
@@ -351,7 +345,6 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
         plt.ylim(0,100)
         plt.title(f'{consensus_label}', fontsize=24)
         plt.tight_layout()
-        print(f"Saving plot to {output_dir}")
         plt.savefig(Path(output_dir) / f'{consensus_type}_vs_bias.png', dpi=300, bbox_inches='tight')
 
 def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
@@ -370,7 +363,7 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
             df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
             mean = df.mean()
             sem = df.std() / np.sqrt(len(df))
-            results_df = pd.concat([results_df, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
+            results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
 
         custom_order = ['scale_free_correct_hub', 'scale_free_correct_edge', 'scale_free_unbiased', 'scale_free_incorrect_edge', 'scale_free_incorrect_hub']
         results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
@@ -396,35 +389,25 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
         plt.savefig(Path(output_dir) / f'{consensus_type}_incorrect_vs_bias.png', dpi=300, bbox_inches='tight')        
 
 def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: dict[str, str]) -> None:
-    
     csv_files = glob.glob(input_file_path, recursive=True)
-
     df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
 
-    # filter round not equal to 1
+    # Filter out the first round
     df = df[df['round'] != 0]
-    df = df.query("bias == 'unbiased'").copy()
 
+    # Filter out the biased agents
+    df = df.query("bias == 'unbiased'").copy()
     df['correct'] = df['correct'].astype('category')
     
-
-    # Prepare the plot
     plt.figure(figsize=(12, 8))
-
-    custom_palette = {True: graph_colours['correct_bias_hub'], False: graph_colours['incorrect_bias_hub']}  # Example: Blue for True, Orange for False
-
-    # KDE plot for the distribution of proportion of correct neighbors, split by correctness
-    # The `clip` parameter restricts the range of the KDE to [0, 1]
-    sns.kdeplot(data=df, x='proportion_neighbors_correct', hue='correct', fill=False, common_norm=False, palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
-    
+    custom_palette = {True: graph_colours['scale_free_correct_hub'], False: graph_colours['scale_free_incorrect_hub']}
+    sns.kdeplot(data=df, x='proportion_neighbors_correct_previous_round', hue='correct', fill=False, common_norm=False, palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
     plt.title('Agent Correctness by Proportion of Neighbours Correct',  fontsize=24)
     plt.xlabel('Proportion of Neighbours Correct', fontsize=20)
     plt.ylabel('Density', fontsize=20)
     plt.yticks(fontsize=16)
     plt.xticks(fontsize=16)
-
     plt.legend(title='Correctness', labels=['Correct', 'Incorrect'], fontsize=16, title_fontsize=16, loc='upper left')
-    
     plt.tight_layout()
     plt.savefig(f"{res_dir_path}neighbours_accuracy.png", dpi=300)
 
@@ -506,7 +489,6 @@ def created_gifs(parsed_agent_response: pd.DataFrame,
                 images.append(image_path)
 
             gif_path = res_repertory_repeat / f'q{question}.gif'
-            print(f"Saving gif to {gif_path}")
             with imageio.get_writer(gif_path, mode='I', fps=1, loop=0) as writer:
                 for image_path in images:
                     image = imageio.v3.imread(image_path)

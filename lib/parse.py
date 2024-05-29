@@ -37,7 +37,6 @@ def parse_output_mmlu(output_dir_path: Path, res_file_path: Path) -> pd.DataFram
     """
     # list of all csv files
     csv_files_to_parse = [Path(str_path) for str_path in glob(f'{str(output_dir_path)}/*.csv', recursive=False)]
-
     # Delete previous file and write headers
     with open(res_file_path, mode="w+") as f:
         f.write('network_number|agent_id|round|question_number|repeat|parsed_response|correct_response|correct|bias\n')

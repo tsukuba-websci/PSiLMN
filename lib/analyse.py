@@ -22,7 +22,7 @@ def analyse_simu(agent_response: Path,
         Args:
             agent_response: Path to the agent response CSV file.
             analyse_dir: Path to the directory where the analysis results will be saved.
-            figs: Boolean to determine if the figures should be created or not.
+            gifs: Boolean to determine if the figures should be created or not.
 
         Returns:
             graph_type: The type of graph used in the simulation.
@@ -42,39 +42,35 @@ def analyse_simu(agent_response: Path,
     network_responses_df = parse.get_network_responses(agent_parsed_resp, analyse_dir / f'network_responses/{agent_response.name}.csv')
 
     # Analyse the responses of this configuration
-    fig_path = analyse_dir / f'figs/{agent_response.name}/'
-    Path(fig_path).mkdir(exist_ok=True)
+    results_path = analyse_dir / f'results/{agent_response.name}/'
+    Path(results_path).mkdir(exist_ok=True)
+
     # Accuracy
-    visu.accuracy_repartition(network_responses_df,
-                              f'{network_bias}',
-                              num_agents,
-                              fig_path)
+    visu.accuracy_repartition(network_responses_df, f'{network_bias}', num_agents, results_path)
 
     # Consensus
     consensus_df = calculate_consensus_per_question(agent_parsed_resp)
-    visu.consensus_repartition(consensus_df, graph_type, num_agents, fig_path)
+    visu.consensus_repartition(consensus_df, results_path)
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
-    visu.opinion_changes(opinion_changes, graph_type, fig_path, graph_names, graph_colors)
+    visu.opinion_changes(opinion_changes, graph_type, results_path, graph_names, graph_colors)
 
     # Neighbors
-    # calculate_proportion_neighbours_correct(agent_parsed_resp, graph_type, fig_path)
+    calculate_proportion_neighbours_correct(agent_parsed_resp, graph_type, results_path)
 
-    # Figs
+    # Gifs
     if gifs:
-        graphml_path = Path(f'experiment/data/{graph_type}/{num_agents}.graphml')
-        visu.created_figs(agent_parsed_resp, graphml_path, fig_path / f'{agent_response.name}/gifs/')
+        graphml_path = Path(f'experiment/data/{graph_type}_{network_bias}/{num_agents}.graphml')
+        visu.created_gifs(agent_parsed_resp, graphml_path, results_path / f'{agent_response.name}/gifs/')
 
     # Wrong response consensus
     agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp,
                                                              network_responses_df)
     consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses)
     visu.consensus_repartition(consensus_df,
-                               f'{graph_type} (wrong ansers only)',
-                               num_agents,
-                               fig_path,
-                               wrong_response= True)
+                               results_path,
+                               wrong_response=True)
 
     return graph_type, num_agents, network_bias
 
@@ -92,9 +88,12 @@ def parse_file_path(dir_path : Path) -> Tuple[int, str, str]:
     '''
     num_agents = 25 # fixed for this paper
 
-    graph_type = dir_path.name
-    network_bias = "unbiased"
+    if "scale_free" in dir_path.name:
+        graph_type = "scale_free"
+    else:
+        graph_type = dir_path.name
 
+    network_bias = "unbiased"
     if 'scale_free' in dir_path.name:
         network_bias = "unbiased"
         if "incorrect" in dir_path.name and "hub" in dir_path.name:
@@ -105,7 +104,6 @@ def parse_file_path(dir_path : Path) -> Tuple[int, str, str]:
             network_bias = "correct_hub"
         elif "correct" in dir_path.name and "edge" in dir_path.name:
             network_bias = "correct_edge"
-        graph_type = f'scale_free_{network_bias}'
 
     return num_agents, graph_type, network_bias
 
@@ -200,7 +198,7 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
 
     # Iterate over each unique combination of network number, round, question number, and repeat
     for (network_num, round_, question_number, repeat), df_group in df.groupby(['network_number', 'round', 'question_number', 'repeat']):
-        graphml_path = Path(f'data/{graph_type}/{network_num}.graphml')
+        graphml_path = Path(f'input/{graph_type}/{network_num}.graphml')
         G = nx.read_graphml(graphml_path)
         
         # Check if the previous round exists
