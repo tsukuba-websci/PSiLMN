@@ -67,10 +67,13 @@ def analyse_simu(agent_response: Path,
     # Wrong response consensus
     agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp,
                                                              network_responses_df)
-    consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses)
-    visu.consensus_repartition(consensus_df,
-                               results_path,
-                               wrong_response=True)
+    if len(agent_parsed_wrong_responses) != 0:
+        consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses)
+        visu.consensus_repartition(consensus_df,
+                                results_path,
+                                wrong_response=True)
+    else:
+        print("No wrong responses found")
 
     return graph_type, num_agents, network_bias
 
@@ -298,6 +301,5 @@ def filter_wrong_responses(agent_parsed_responses: pd.DataFrame,
     agent_parsed_responses.loc[:, 'key'] = agent_parsed_responses['network_number'].apply(str) + '_' + agent_parsed_responses['question_number'].apply(str) + '_' + agent_parsed_responses['repeat'].apply(str)
 
     res = agent_parsed_responses[agent_parsed_responses['key'].isin(wrong_responses['key'])]
-
     return res.drop(columns='key')
 

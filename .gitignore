@@ -9,3 +9,4 @@
 temp.py
 *.png
 !/experiment/data/**/*.png
+*.pyc

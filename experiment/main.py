@@ -51,7 +51,7 @@ async def test_mmlu(network: Network, output_file: Path, bias: Optional[Bias] = 
         correct_response = row["target"]
 
         unbiased_agent_input = f"Answer the following question as accurately as possible. {question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nExplain your answer, putting the answer in the form (A), (B), (C) or (D) with round brackets, at the end of your response."
-        if not bias == "unbiased":
+        if not bias or bias.type == "unbiased":
             biased_agent_input = unbiased_agent_input
         else:
             if bias.type == "correct":
@@ -59,7 +59,6 @@ async def test_mmlu(network: Network, output_file: Path, bias: Optional[Bias] = 
             elif bias.type == "incorrect":
                 incorrect_response = "A" if correct_response != "A" else "B"
                 biased_reponse = incorrect_response, row[incorrect_response]
-
             biased_agent_input = f"{question}\nExplain how the answer could be ({biased_reponse[0]}) {biased_reponse[1]}. Finish the sentence with therefore the answer is ({biased_reponse[0]})."
             assign_biases(network=network, bias=bias)
 
