@@ -30,9 +30,9 @@ GRAPH_NAMES = {
 }
 
 GRAPH_COLORS = {
-    'fully_connected' : '#a6d854',
-    'fully_disconnected' : '#4daf4a',
-    'random' : '#f25355',
+    'fully_connected' : 'purple',
+    'fully_disconnected' : 'pink',
+    'random' : 'orange',
     'scale_free_correct_edge': '#a6d854',
     'scale_free_correct_hub': '#4daf4a',
     'scale_free_incorrect_edge': '#f25355',
@@ -47,11 +47,13 @@ def main():
 
     response_dirs = [Path(str_path) for str_path in glob(f'{AGENT_RESPONSES_PATH}*', recursive=False)]
     for response_path in response_dirs:
-        analyse.analyse_simu(agent_response= response_path, 
-                            analyse_dir= Path(OUTPUT_ANALYSIS_PATH),
+        analyse.analyse_simu(agent_response=response_path, 
+                            analyse_dir=Path(OUTPUT_ANALYSIS_PATH),
                             graph_names=GRAPH_NAMES,
                             graph_colors=GRAPH_COLORS,
                             gifs = False)
+        visu.neighbours_accuracy(f"{RESULTS_PATH}/{response_path.name}/**/proportion_neighbors_correct_previous_round.csv", 
+                        f"{RESULTS_PATH}/{response_path.name}/", GRAPH_COLORS)
 
     visu.accuracy_vs_network(f"{RESULTS_PATH}**/accuracy_per_network_and_repeat.csv", 
                           RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
@@ -64,7 +66,7 @@ def main():
 
     visu.consensus_incorrect_vs_bias(f"{RESULTS_PATH}scale_free_**/consensus_wrong_response.csv", 
                                      RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
-    
+
     visu.neighbours_accuracy(f"{RESULTS_PATH}**/proportion_neighbors_correct_previous_round.csv", 
                             RESULTS_PATH, GRAPH_COLORS)
 

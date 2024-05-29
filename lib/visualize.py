@@ -309,6 +309,7 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     csv_files = glob.glob(agent_responses_path, recursive=True)
     results_df = pd.DataFrame()
     for csv_file in csv_files:
+        print(csv_file)
         df = pd.read_csv(csv_file)
         df['network'] = Path(csv_file).parent.name
         results_df = pd.concat([results_df, df], ignore_index=True, sort=False)
@@ -320,11 +321,21 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     plt.figure(figsize=(12, 8))
     sns.set_style("white")
 
+    def format_label(network):
+        if 'correct' in network:
+            return f"Scale-Free (Correct Bias {network.split('_')[-1].capitalize()})"
+        elif 'incorrect' in network:
+            return f"Scale-Free (Incorrect Bias {network.split('_')[-1].capitalize()})"
+        elif 'unbiased' in network:
+            return 'Scale-Free (Unbiased)'
+        else:
+            return human_readable_labels.get(network, network)
+
     for network, group in results_df.groupby('network'):
         x = group['round']
         y = group['accuracy']*100
         custom_color = graph_colors.get(network, 'gray')
-        plt.plot(x+1, y, marker='o', markersize=5, label=network, linewidth=3, color=custom_color)  # Increase markersize and linewidth
+        plt.plot(x+1, y, marker='o', markersize=5, label=format_label(network), linewidth=3, color=custom_color)  # Increase markersize and linewidth
         plt.errorbar(x+1, y, yerr=group['standard_error']*100, fmt='none', capsize=5, elinewidth=2, ecolor='black')  # Increase capsize and elinewidth
 
     plt.xlabel('Round', fontsize=20)  # Increase fontsize
@@ -338,7 +349,7 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
 
     # Use the label_mapping for the legend
     handles, labels = plt.gca().get_legend_handles_labels()
-    new_labels = [human_readable_labels[label] for label in labels]
+    new_labels = [format_label(label) for label in labels]
     plt.legend(handles, new_labels, fontsize=14)  # Increase fontsize
     plt.tight_layout()
 
@@ -423,7 +434,7 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
         plt.tight_layout()
         plt.savefig(Path(output_dir) / f'{consensus_type}_incorrect_vs_bias.png', dpi=300, bbox_inches='tight')        
 
-def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: dict[str, str]) -> None:
+def neighbours_accuracy(input_file_path: str, output_file_path: str, graph_colours: dict[str, str]) -> None:
     csv_files = glob.glob(input_file_path, recursive=True)
     df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
 
@@ -444,7 +455,7 @@ def neighbours_accuracy(input_file_path: str, res_dir_path: str, graph_colours: 
     plt.xticks(fontsize=16)
     plt.legend(title='Correctness', labels=['Correct', 'Incorrect'], fontsize=16, title_fontsize=16, loc='upper left')
     plt.tight_layout()
-    plt.savefig(f"{res_dir_path}neighbours_accuracy.png", dpi=300)
+    plt.savefig(f"{output_file_path}neighbours_accuracy.png", dpi=300)
 
 def created_gifs(parsed_agent_response: pd.DataFrame,
                  graphml_path: Path,
