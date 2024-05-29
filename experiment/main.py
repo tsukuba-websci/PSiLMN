@@ -66,7 +66,7 @@ async def test_mmlu(network: Network, output_file: Path, bias: Optional[Bias] = 
         await ask_agents_and_write_responses(network, unbiased_agent_input=unbiased_agent_input, biased_agent_input=biased_agent_input , output_file=output_file, question_number=question_number, correct_response=correct_response)
 
         # Sleep as to not overload the OpenAI API
-        time.sleep(5)
+        time.sleep(0.25)
 
 def assign_biases(network: Network, bias: Bias):
     if bias.location not in ["hub", "edge"]:
@@ -92,15 +92,12 @@ async def write_responses_to_csv(file_path: str, responses: list):
     file_is_empty = not os.path.getsize(file_path) if file_exists else True
 
     async with aiofiles.open(file_path, mode='a', newline='') as file:
-        # If the file is empty, write the header first
         if file_is_empty:
             header = "agent_id|round|question_number|response|correct_response|bias\n"
             await file.write(header)
 
         for response_row in responses:
-            # Use a pipe '|' as the delimiter for joining elements in the response_row
             csv_line = '|'.join([str(item) for item in response_row]) + '\n'
-            # Write the formatted string to the file
             await file.write(csv_line)
 
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), reraise=True)
@@ -181,7 +178,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     model = args.model
 
-    output_path = Path("output")
+    output_path = Path("output/agent_responses")
     output_path.mkdir(parents=True, exist_ok=True)
 
     start_time = time.time()
