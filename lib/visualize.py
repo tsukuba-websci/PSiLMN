@@ -230,8 +230,8 @@ def consensus_vs_graph(consensus_path: Path,
         plt.savefig(res_file_path / res_file)
         plt.close('all')
 
-def accuracy_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
-    ''' Plot the accuracy vs bias comparison between graphs. The program creates a .png image and saves it to the output directory. Additionally, now it saves the accuracy and standard error for each csv file into a new csv file. '''
+def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
+    ''' Plot the accuracy vs bias comparison between graphs. The program creates a .png image and saves it to the output directory. Additionally, it saves the accuracy and standard error for each csv file into a new csv file. '''
 
     results_df = pd.DataFrame(columns=['network', 'accuracy', 'standard_error'])
     
@@ -240,34 +240,69 @@ def accuracy_vs_bias(input_file_path: str, output_dir: str, human_readable_label
     for csv_file in csv_files:
         df = pd.read_csv(csv_file)['accuracy']
         mean = df.mean()
-        sem = df.std() / np.sqrt(len(df))
+        standard_error = df.std() / np.sqrt(len(df))
 
         # Append results
-        results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name],
-                                                          'accuracy': mean,
-                                                          'standard_error': sem})], ignore_index=True)
+        new_data = pd.DataFrame({
+            'network': [Path(csv_file).parent.name],
+            'accuracy': mean,
+            'standard_error': standard_error
+        })
+
+        results_df = pd.concat([results_df if not results_df.empty else None, new_data], ignore_index=True)
 
     # Save the results to a new CSV file
     results_df.sort_values(by='accuracy', ascending=False, inplace=True)
 
-    results_path = Path(output_dir) / 'accuracy_and_bias.csv'
+    results_path = Path(output_dir) / 'accuracy_and_network.csv'
     results_df.to_csv(results_path, index=False)
 
-    network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
+    # Define categories for unbiased and biased networks
+    unbiased_networks = ['scale_free_unbiased', 'random', 'fully_connected', 'fully_disconnected']
+    biased_networks = ['scale_free_correct_hub', 'scale_free_incorrect_hub', 'scale_free_correct_edge', 'scale_free_incorrect_edge', 'scale_free_unbiased']
 
-    plt.figure(figsize=(12, 8))
-    plt.bar(results_df['network'], results_df['accuracy'] * 100, yerr=results_df['standard_error'] * 100, capsize=5, color=network_colors)
-    plt.xlabel('Network Type', fontsize=20)
-    plt.ylabel('Accuracy (%)', fontsize=20)
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
-    plt.title('Accuracy vs Bias Type', fontsize=24)
+    # Function to plot graphs
+    def plot_accuracy_vs_network(results_df, networks, title, file_name, label_modifier=None):
+        filtered_df = results_df[results_df['network'].isin(networks)]
+        network_colors = [graph_colors.get(network, 'gray') for network in filtered_df['network']]
+        
+        plt.figure(figsize=(12, 8))
+        plt.bar(filtered_df['network'], filtered_df['accuracy'] * 100, yerr=filtered_df['standard_error'] * 100, capsize=5, color=network_colors)
+        plt.xlabel('Network Type', fontsize=20)
+        plt.ylabel('Accuracy (%)', fontsize=20)
+        plt.xticks(fontsize=16)
+        plt.yticks(fontsize=16)
+        plt.title(title, fontsize=24)
+        
+        # Modify labels if a modifier function is provided
+        if label_modifier:
+            labels = [label_modifier(human_readable_labels.get(network, network)) for network in filtered_df['network']]
+        else:
+            labels = [human_readable_labels.get(network, network) for network in filtered_df['network']]
+        
+        plt.xticks(range(len(filtered_df['network'])), labels, rotation=45, ha="right")
+        
+        plt.tight_layout()
+        plt.savefig(Path(output_dir) / file_name, dpi=300, bbox_inches='tight')
+        plt.close()
 
-    # Set the x-tick labels to the human-readable labels
-    plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(network, network) for network in results_df['network']], rotation=45, ha="right")
+    # Plot for unbiased networks
+    plot_accuracy_vs_network(
+        results_df,
+        unbiased_networks,
+        'Accuracy vs Network Type',
+        'accuracy_vs_network.png',
+        label_modifier=lambda x: 'Scale-Free' if 'Unbiased' in x else x
+    )
 
-    plt.tight_layout()
-    plt.savefig(Path(output_dir) / 'accuracy_vs_bias.png', dpi=300,bbox_inches='tight')
+    # Plot for biased networks
+    plot_accuracy_vs_network(
+        results_df,
+        biased_networks,
+        'Accuracy vs Bias Type in Scale-Free Networks',
+        'accuracy_vs_bias.png',
+        label_modifier=lambda x: 'Unbiased' if 'Scale-Free' in x else x
+    )
 
 def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
 

@@ -26,7 +26,7 @@ GRAPH_NAMES = {
     'scale_free_correct_hub' : 'Correct Bias (Hub)',
     'scale_free_incorrect_edge' : 'Incorrect Bias (Edge)',
     'scale_free_incorrect_hub' : 'Incorrect Bias (Hub)',
-    'scale_free_unbiased' : 'Scale Free Unbiased'
+    'scale_free_unbiased' : 'Scale-Free Unbiased'
 }
 
 GRAPH_COLORS = {
@@ -53,7 +53,7 @@ def main():
                             graph_colors=GRAPH_COLORS,
                             gifs = False)
 
-    visu.accuracy_vs_bias(f"{RESULTS_PATH}scale_free_**/accuracy_per_network_and_repeat.csv", 
+    visu.accuracy_vs_network(f"{RESULTS_PATH}**/accuracy_per_network_and_repeat.csv", 
                           RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
 
     visu.accuracy_vs_round(f"{RESULTS_PATH}**/accuracy_per_round.csv", 

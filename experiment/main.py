@@ -186,7 +186,7 @@ if __name__ == "__main__":
 
     start_time = time.time()
 
-    # Test scale free networks with different types of biases
+    # Test scale-free networks with different types of biases
     scale_free_networks: List[Network] = [Network(path=f"input/scale_free/{i}.graphml", model=model) for i in range(NUM_NETWORKS)]
     biases: List[Bias] = [Bias("unbiased", "none"), Bias("correct", "hub"), Bias("incorrect", "hub"), Bias("correct", "edge"), Bias("incorrect", "edge")]
     for network_num, network in enumerate(scale_free_networks):
