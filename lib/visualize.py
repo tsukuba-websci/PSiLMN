@@ -309,7 +309,6 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     csv_files = glob.glob(agent_responses_path, recursive=True)
     results_df = pd.DataFrame()
     for csv_file in csv_files:
-        print(csv_file)
         df = pd.read_csv(csv_file)
         df['network'] = Path(csv_file).parent.name
         results_df = pd.concat([results_df, df], ignore_index=True, sort=False)
