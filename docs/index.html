@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Problem Solving in Language Model Networks</title>
+        <link rel="stylesheet" type="text/css" href="styles.css">
+    </head>
+    <body>
+        <div class="container">
+            <h1 style="margin-top: 50px;"><span class="highlighted-title">Problem Solving in Language Model Networks</span></h1>
+            <div class="author-info">
+                <p class="author">Ciaran Regan<sup>1</sup>, Alexandre Gournail<sup>2</sup>, Mizuki Oka<sup>1</sup></p>
+                <p class="affiliation">
+                    <sup>1</sup>Grad. School of Science and Technology, University of Tsukuba, Tsukuba, Ibaraki, Japan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sup>2</sup>Ensimag, Grenoble INP, Grenoble, France
+                </p>&nbsp;
+            </div>
+            <div class="images-container">
+                <img src="./figs/tsukuka.png" alt="First Image" class="image">
+                <img src="./figs/ensimag.png" alt="Second Image" class="image">
+            </div>  
+
+            <h3 class="abstract-heading">Abstract</h3>
+            <p>We investigate multi-agent approaches to enhance the reasoning and question-answering capabilities of Large Language Models (LLMs). Our study extends the concept of multi-agent debate to more complex network structures, specifically scale-free networks. We measure the question-answering performance, the strength of the consensus formed, and the impact of bias within the network. Results indicate that correctly biased hub nodes significantly improve overall system performance, suggesting that strategically placing knowledgeable agents can boost collective intelligence.</p>
+            
+            <h3 class="abstract-heading">Introduction</h3>
+            <p>Large Language Models (LLMs) have shown remarkable abilities in various tasks, yet they still struggle with hallucinations and incorrect answers. To address these issues, multi-agent approaches inspired by human problem-solving have been introduced. Techniques like ReAct and Reflexion enable LLMs to engage in iterative reasoning and self-reflection, improving their decision-making. However, these methods primarily use single agents. Our work explores multi-agent systems on scale-free networks, aiming to understand how agents influence each other and how network topology affects performance. We extend the concept of multi-agent debate to these complex networks to analyze their dynamics and effectiveness.</p>
+            
+            <h3 class="abstract-heading">Methods</h3>
+            <p>We represent LLM agents as nodes in a network, with edges indicating communication channels. In multi-agent debate, agents first solve problems individually, then reconsider their answers based on their neighbors' responses and their previous answers. This process repeats for several rounds, culminating in a majority vote to determine the collective answer. We introduce bias by providing certain agents with correct or incorrect answers and study the influence of these biased agents based on their network position (hubs or edges). The impact of these biases on the overall performance and the consensus within the network is analyzed.</p>
+            
+            <h3 class="abstract-heading">Experimental Setup</h3>
+            <p>We conducted experiments using three scale-free networks, each with 25 GPT-3.5-Turbo powered agents. These agents engaged in four rounds of debate to answer 100 high-school mathematics questions from the MMLU dataset. The experiment was repeated three times to ensure statistical significance. To study the effect of bias, we introduced correct and incorrect answers into either the hub or edge nodes and compared the performance with unbiased networks. The goal was to observe how biased nodes influenced the spread of information and the overall accuracy of the system.</p>
+            
+            <h3 class="abstract-heading">Results</h3>
+            <p>The introduction of bias into hub nodes had a significant impact on performance. Correctly biased hubs increased the system's accuracy from 64% to 86%, while incorrectly biased hubs reduced it to 42%. This shows that agents are strongly influenced by their neighbors' responses. Networks with biased edge nodes showed little change in performance, indicating that influence is more significant when the biased nodes are centrally located. Our analysis revealed that agents tend to form a consensus when the system answers correctly, but responses are split when the system is incorrect. The presence of bias reduced consensus in incorrect answers, increasing the variability in responses.</p>
+            
+            <h3 class="abstract-heading">Conclusion</h3>
+            <p>Our study demonstrates that the strategic placement of knowledgeable agents in central network positions can enhance the overall performance of multi-agent systems. This finding suggests that future multi-agent systems should leverage network topology to optimize collective intelligence. By placing larger, more capable models at network hubs and smaller models at the periphery, it is possible to improve performance without a significant increase in computational cost. Future research should explore different network structures and larger systems to generalize these findings further.</p>
+            
+            <h3 class="abstract-heading">Discussion and Limitations</h3>
+            <p>This study has important implications for designing future multi-agent systems. However, it is limited by the number of agents, questions, and rounds used due to computational constraints. Future work should explore a broader range of network structures, including random and small-world networks, and increase the number of agents to better understand the dynamics and performance of these systems. Despite these limitations, our findings provide valuable insights into how bias and network topology influence collective problem-solving and consensus formation in multi-agent systems.</p>
+        </div>
+    </body>
+</html>
