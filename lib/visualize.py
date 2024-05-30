@@ -84,9 +84,9 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
 
     # Plot for correct_prop
     plt.figure(figsize=(10, 8))
-    sns.histplot(consensus_df, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Consensus')
+    sns.histplot(consensus_df, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Overall')
     if wrong_consensus_df is not None:
-        sns.histplot(wrong_consensus_df, x="correct_prop", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Wrong Response Consensus')
+        sns.histplot(wrong_consensus_df, x="correct_prop", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
     plt.title("Proportion of Agents Correct per Question", fontsize=24)
     plt.xlabel("Proportion of Agents Correct", fontsize=20)
     plt.ylabel("Relative Frequency", fontsize=20)
@@ -100,10 +100,10 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
 
     # Plot for simpson
     plt.figure(figsize=(10, 8))
-    sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Consensus')
+    sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Overall')
     if wrong_consensus_df is not None:
-        sns.histplot(wrong_consensus_df, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Wrong Response Consensus')
-    plt.title("Simpson Index $\\lambda$ per Question", fontsize=24)
+        sns.histplot(wrong_consensus_df, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
+    plt.title("Consensus within the Collective", fontsize=24)
     plt.xlabel("Simpson Index $\\lambda$", fontsize=20)
     plt.ylabel("Relative Frequency", fontsize=20)
     plt.xticks(fontsize=16)
@@ -445,7 +445,7 @@ def neighbours_accuracy(input_file_path: str, output_file_path: str, graph_colou
     plt.figure(figsize=(12, 8))
     custom_palette = {True: graph_colours['scale_free_correct_hub'], False: graph_colours['scale_free_incorrect_hub']}
     sns.kdeplot(data=df, x='proportion_neighbors_correct_previous_round', hue='correct', fill=False, common_norm=False, palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
-    plt.title('Agent Correctness by Proportion of Neighbours Correct',  fontsize=24)
+    plt.title('Agent Correctness by Proportion of Neighbours Correct in Prev. Round',  fontsize=24)
     plt.xlabel('Proportion of Neighbours Correct', fontsize=20)
     plt.ylabel('Density', fontsize=20)
     plt.yticks(fontsize=16)
