@@ -19,11 +19,15 @@ import glob
 import time
 import os
 import re
+import dotenv
+
+dotenv.load_dotenv("../.env")
+hf_token = os.getenv("HF_TOKEN")
 
 NUM_NETWORKS = 1
-NUM_QUESTIONS = 1
-NUM_ROUNDS = 4
-NUM_REPEATS = 2
+NUM_QUESTIONS = 4
+NUM_ROUNDS = 2
+NUM_REPEATS = 1
 
 assert(NUM_NETWORKS <= 3)
 
@@ -37,7 +41,7 @@ async def test_mmlu(network: Network, output_file: Path, bias: Optional[Bias] = 
     """ Test agent networks with the MMLU dataset. """
     
     # Load the MMLU dataset
-    dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test").to_pandas()
+    dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test", token = hf_token).to_pandas()
     dataset = dataset.head(NUM_QUESTIONS)
 
     # Iterate through each of the questions in the MMLU dataset
