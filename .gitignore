@@ -8,5 +8,5 @@
 /output
 temp.py
 *.png
-!/experiment/data/**/*.png
+!/experiment/input/**/*.png
 *.pyc
