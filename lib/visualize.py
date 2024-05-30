@@ -16,6 +16,7 @@ from pathlib import Path
 import glob
 import numpy as np
 from pathlib import Path
+from matplotlib.patches import Patch  # Add this import
 
 ### Single simulation plot
 def accuracy_repartition(network_responses : pd.DataFrame, 
@@ -35,7 +36,7 @@ def accuracy_repartition(network_responses : pd.DataFrame,
     df = df.rename(columns = {'correct': 'accuracy'})
     df.to_csv(res_dir_path / 'accuracy_per_question_and_network.csv', index = False)
 
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(12, 8))
     g = sns.displot(df, x="accuracy", hue="network_number")
     g.set(title=f"Average Accuracy per Question and network for {number_agents} Agents\nin {graph_name}")
     g.set_axis_labels("Accuracy (proportion of correct answers)", "Frequency (%)")
@@ -46,7 +47,7 @@ def accuracy_repartition(network_responses : pd.DataFrame,
     df = df.rename(columns = {'correct': 'accuracy'})
     df.to_csv(res_dir_path / 'accuracy_per_question_and_repeat.csv', index = False)
 
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(12, 8))
     g = sns.displot(df, x="accuracy")
     g.set(title=f"Average Accuracy per Question for {number_agents} Agents\nin {graph_name}")
     g.set_axis_labels("Accuracy (proportion of correct answers)", "Frequency (%)")
@@ -57,7 +58,7 @@ def accuracy_repartition(network_responses : pd.DataFrame,
     df = df.rename(columns = {'correct': 'accuracy'})
     df.to_csv(res_dir_path / 'accuracy_per_network_and_repeat.csv', index = False)
 
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(12, 8))
     g = sns.displot(df, x="accuracy")
     g.set(title=f"Average Accuracy per Network for {number_agents} Agents\nin {graph_name}")
     g.set_axis_labels("Accuracy (proportion of correct answers)", "Frequency (%)")
@@ -83,7 +84,7 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
         wrong_consensus_df.to_csv(res_dir_path / 'consensus_wrong_response.csv', mode='w', sep=',', index=False)
 
     # Plot for correct_prop
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(12, 8))
     sns.histplot(consensus_df, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Overall')
     if wrong_consensus_df is not None:
         sns.histplot(wrong_consensus_df, x="correct_prop", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
@@ -99,7 +100,7 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
     plt.close()
 
     # Plot for simpson
-    plt.figure(figsize=(10, 8))
+    plt.figure(figsize=(12, 8))
     sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Overall')
     if wrong_consensus_df is not None:
         sns.histplot(wrong_consensus_df, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
@@ -148,7 +149,7 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path
     grouped['percentage'] = (grouped['counts'] / grouped['total_per_round']) * 100  # Calculate percentage
 
     # Create the plot
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(12, 8))
     gfg = sns.barplot(data=grouped, x='round', y='percentage', hue='Answer Change', hue_order=hue_order,
                       palette=custom_palette)
     plt.xlabel("Round Number", fontsize=20)
@@ -187,7 +188,7 @@ def accuracy_vs_agent_number(network_responses_path: Path,
     
     err_palette = {"color": "black"}
 
-    plt.figure(figsize=(16, 9))
+    plt.figure(figsize=(12, 8))
     sns.pointplot(data = network_responses_df, 
                  x='size', y='correct',
                  errorbar=("ci", 95),
@@ -220,7 +221,7 @@ def consensus_vs_graph(consensus_path: Path,
                   'simpson_comparison.png',
                   'simpson_wrong_answers.png']
     for Y, title, res_file in zip(Y_list, title_list, files_name):
-        plt.figure(figsize=(16, 9))
+        plt.figure(figsize=(12, 8))
         sns.lineplot(data=consensus_df ,x='size', y=Y, hue="network_bias").set(title=f'{title} vs Graph Type and Size')
         plt.xlabel('Number of agents (graph size)')
         plt.ylabel('Consensus (%)')
@@ -250,7 +251,7 @@ def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_la
         results_df = pd.concat([results_df if not results_df.empty else None, new_data], ignore_index=True)
 
     # Save the results to a new CSV file
-    results_df.sort_values(by='accuracy', ascending=False, inplace=True)
+    results_df.sort_values(by='network', ascending=False, inplace=True)
 
     results_path = Path(output_dir) / 'accuracy_and_network.csv'
     results_df.to_csv(results_path, index=False)
@@ -259,13 +260,32 @@ def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_la
     unbiased_networks = ['scale_free_unbiased', 'random', 'fully_connected', 'fully_disconnected']
     biased_networks = ['scale_free_correct_hub', 'scale_free_incorrect_hub', 'scale_free_correct_edge', 'scale_free_incorrect_edge', 'scale_free_unbiased']
 
-    # Function to plot graphs
     def plot_accuracy_vs_network(results_df, networks, title, file_name, label_modifier=None):
         filtered_df = results_df[results_df['network'].isin(networks)]
         network_colors = [graph_colors.get(network, 'gray') for network in filtered_df['network']]
         
         plt.figure(figsize=(12, 8))
-        plt.bar(filtered_df['network'], filtered_df['accuracy'] * 100, yerr=filtered_df['standard_error'] * 100, capsize=5, color=network_colors)
+        
+        bars = plt.bar(
+            filtered_df['network'], 
+            filtered_df['accuracy'] * 100, 
+            yerr=filtered_df['standard_error'] * 100, 
+            capsize=5, 
+            color=network_colors, 
+            ecolor=(0, 0, 0, 0.3)
+        )
+
+        # Apply hatching based on labels
+        for bar, network, color in zip(bars, filtered_df['network'], network_colors):
+            if 'edge' in network:
+                bar.set_facecolor((*bar.get_facecolor()[:3], 0.7))
+                bar.set_hatch('/')  # diagonal lines
+                bar.set_edgecolor(color)  # Set the edge color to match the bar color
+            elif 'hub' in network:
+                bar.set_facecolor((*bar.get_facecolor()[:3], 0.7))
+                bar.set_hatch('\\')  # reverse diagonal lines
+                bar.set_edgecolor(color)  # Set the edge color to match the bar color
+        
         plt.xlabel('Network Type', fontsize=20)
         plt.ylabel('Accuracy (%)', fontsize=20)
         plt.xticks(fontsize=16)
@@ -278,7 +298,7 @@ def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_la
         else:
             labels = [human_readable_labels.get(network, network) for network in filtered_df['network']]
         
-        plt.xticks(range(len(filtered_df['network'])), labels, rotation=45, ha="right")
+        plt.xticks(range(len(filtered_df['network'])), labels)
         
         plt.tight_layout()
         plt.savefig(Path(output_dir) / file_name, dpi=300, bbox_inches='tight')
@@ -303,7 +323,6 @@ def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_la
     )
 
 def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
-
     csv_files = glob.glob(agent_responses_path, recursive=True)
     results_df = pd.DataFrame()
     for csv_file in csv_files:
@@ -315,7 +334,7 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     combined_csv_path = Path(output_dir) / 'accuracy_and_round.csv'
     results_df.to_csv(combined_csv_path, index=False)
 
-    plt.figure(figsize=(12, 8))
+    plt.figure(figsize=(16, 9))  # 16:9 aspect ratio
     sns.set_style("white")
 
     def format_label(network):
@@ -326,33 +345,44 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
         elif 'unbiased' in network:
             return 'Scale-Free (Unbiased)'
         else:
-            return human_readable_labels.get(network, network)
+            return human_readable_labels.get(network, network).replace("\n", " ")
+
+    hatch_patterns = {
+        'hub': '/',
+        'edge': '\\'
+    }
+
+    custom_legend_patches = []
 
     for network, group in results_df.groupby('network'):
         x = group['round']
-        y = group['accuracy']*100
+        y = group['accuracy'] * 100
+        yerr = group['standard_error'] * 100
         custom_color = graph_colors.get(network, 'gray')
-        plt.plot(x+1, y, marker='o', markersize=5, label=format_label(network), linewidth=3, color=custom_color)  # Increase markersize and linewidth
-        plt.errorbar(x+1, y, yerr=group['standard_error']*100, fmt='none', capsize=5, elinewidth=2, ecolor='black')  # Increase capsize and elinewidth
 
-    plt.xlabel('Round', fontsize=20)  # Increase fontsize
-    plt.ylabel('Accuracy (%)', fontsize=20)  # Increase fontsize
+        hatch = next((pattern for key, pattern in hatch_patterns.items() if key in network), '')
 
-    plt.title('Accuracy vs Round', fontsize=24)  # Increase fontsize
+        plt.plot(x + 1, y, marker='o', markersize=5, label=format_label(network), linewidth=3, color=custom_color)
+        plt.fill_between(x + 1, y - yerr, y + yerr, color=custom_color, alpha=0.3, hatch=hatch)
+
+        custom_legend_patches.append(Patch(facecolor=custom_color, edgecolor='k', hatch=hatch, label=format_label(network)))
+
+    plt.xlabel('Round', fontsize=20)
+    plt.ylabel('Accuracy (%)', fontsize=20)
+    plt.title('Accuracy vs Round', fontsize=24)
 
     xticks = np.arange(1, len(results_df['round'].unique()) + 1)
     plt.xticks(xticks, fontsize=16)
     plt.yticks(fontsize=16)
 
-    # Use the label_mapping for the legend
-    handles, labels = plt.gca().get_legend_handles_labels()
-    new_labels = [format_label(label) for label in labels]
-    plt.legend(handles, new_labels, fontsize=14)  # Increase fontsize
+    # Use the custom legend patches for the legend
+    plt.legend(handles=custom_legend_patches, fontsize=14, handlelength=4)
     plt.tight_layout()
 
     # Save the plot as a PNG file
     plot_path = Path(output_dir) / 'accuracy_vs_round.png'
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+    plt.close()
 
 def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
 
@@ -372,7 +402,7 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
 
         results_path = Path(output_dir) / f'{consensus_type}_and_bias.csv'
 
-        custom_order = ['scale_free_correct_hub', 'scale_free_correct_edge', 'scale_free_unbiased', 'scale_free_incorrect_edge', 'scale_free_incorrect_hub']
+        custom_order = ['scale_free_unbiased','scale_free_incorrect_hub' , 'scale_free_incorrect_hub', 'scale_free_incorrect_edge', 'scale_free_correct_hub', 'scale_free_correct_edge']
         results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
         results_df = results_df.sort_values(by='network_order')
 
@@ -380,10 +410,10 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
 
         network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
         plt.figure(figsize=(12, 8))
-        plt.bar(range(len(results_df['network'])), results_df[consensus_type]*100, yerr=results_df['standard_error']*100, capsize=5, color=network_colors)
+        plt.bar(range(len(results_df['network'])), results_df[consensus_type]*100, yerr=results_df['standard_error']*100, capsize=5, color=network_colors, ecolor=(0,0,0,0.3))
         plt.xlabel('Network Type', fontsize=20)
         plt.ylabel(f'{consensus_label} (%)', fontsize=20)
-        plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], rotation=45, ha="right", fontsize=16)
+        plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], fontsize=16)
         plt.yticks(fontsize=16)
         plt.ylim(0,100)
         plt.title(f'{consensus_label}', fontsize=24)
@@ -408,7 +438,7 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
             sem = df.std() / np.sqrt(len(df))
             results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
 
-        custom_order = ['scale_free_correct_hub', 'scale_free_correct_edge', 'scale_free_unbiased', 'scale_free_incorrect_edge', 'scale_free_incorrect_hub']
+        custom_order = ['scale_free_unbiased','scale_free_incorrect_hub' , 'scale_free_incorrect_hub', 'scale_free_incorrect_edge', 'scale_free_correct_hub', 'scale_free_correct_edge']
         results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
         results_df = results_df.sort_values(by='network_order')
 
@@ -417,14 +447,14 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
 
         network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
         plt.figure(figsize=(12, 8))
-        plt.bar(range(len(results_df['network'])), results_df[consensus_type], yerr=results_df['standard_error'], capsize=5, color=network_colors)
+        plt.bar(range(len(results_df['network'])), results_df[consensus_type], yerr=results_df['standard_error'], capsize=5, color=network_colors, ecolor=(0,0,0,0.3))
         plt.xlabel('Network Type', fontsize=20)
 
         if consensus_type == 'simpson':
             plt.ylabel(f'Simpson Index $\\lambda$', fontsize=20)
         else:
             plt.ylabel(f'{consensus_label}', fontsize=20)
-        plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], rotation=45, ha="right", fontsize=16)
+        plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], fontsize=16)
         plt.yticks(fontsize=16)
         plt.ylim(0,1)
         plt.title(f'{consensus_label} vs Bias Type', fontsize=24)

@@ -19,25 +19,25 @@ NETWORK_REPONSES_PATH = f"{OUTPUT_ANALYSIS_PATH}network_responses/"
 RESULTS_PATH = f"{OUTPUT_ANALYSIS_PATH}results/"
 
 GRAPH_NAMES = {
-    'fully_connected' : 'Fully Connected',
-    'fully_disconnected' : 'Fully Disconnected',
+    'fully_connected' : 'Fully\nConnected',
+    'fully_disconnected' : 'Fully\nDisconnected',
     'random' : 'Random',
-    'scale_free_correct_edge' : 'Correct Bias (Edge)',
-    'scale_free_correct_hub' : 'Correct Bias (Hub)',
-    'scale_free_incorrect_edge' : 'Incorrect Bias (Edge)',
-    'scale_free_incorrect_hub' : 'Incorrect Bias (Hub)',
-    'scale_free_unbiased' : 'Scale-Free Unbiased'
+    'scale_free_correct_edge' : 'Correct\nBias\n(Edge)',
+    'scale_free_correct_hub' : 'Correct\nBias\n(Hub)',
+    'scale_free_incorrect_edge' : 'Incorrect\nBias\n(Edge)',
+    'scale_free_incorrect_hub' : 'Incorrect\nBias\n(Hub)',
+    'scale_free_unbiased' : 'Scale-Free\nUnbiased'
 }
 
 GRAPH_COLORS = {
-    'fully_connected': '#ffd4a0',
-    'fully_disconnected': '#ffe0b5',
-    'random': '#80c6cb',
-    'scale_free_correct_edge': '#d2e1a9',
-    'scale_free_correct_hub': '#bbd785',
-    'scale_free_incorrect_edge': '#ffbcc5',
-    'scale_free_incorrect_hub': '#f98b98',
-    'scale_free_unbiased': '#bfe9e9'
+    'fully_connected': '#e6b480',
+    'fully_disconnected': '#5a82c2',  # slightly lighter dark blue
+    'random': '#9b7eb3',
+    'scale_free_correct_edge': '#a0bf74',
+    'scale_free_correct_hub': '#a0bf74',
+    'scale_free_incorrect_edge': '#d2747a',
+    'scale_free_incorrect_hub': '#d2747a',
+    'scale_free_unbiased': '#a8caca'
 }
 
 def main():
