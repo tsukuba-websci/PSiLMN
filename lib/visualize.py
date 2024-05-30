@@ -277,14 +277,13 @@ def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_la
 
         # Apply hatching based on labels
         for bar, network, color in zip(bars, filtered_df['network'], network_colors):
+            bar.set_edgecolor("k")  # Set the edge color to match the bar color
             if 'edge' in network:
-                bar.set_facecolor((*bar.get_facecolor()[:3], 0.7))
+                bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
                 bar.set_hatch('/')  # diagonal lines
-                bar.set_edgecolor(color)  # Set the edge color to match the bar color
             elif 'hub' in network:
-                bar.set_facecolor((*bar.get_facecolor()[:3], 0.7))
-                bar.set_hatch('\\')  # reverse diagonal lines
-                bar.set_edgecolor(color)  # Set the edge color to match the bar color
+                bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
+                bar.set_hatch('o')  # reverse diagonal lines
         
         plt.xlabel('Network Type', fontsize=20)
         plt.ylabel('Accuracy (%)', fontsize=20)
@@ -348,8 +347,8 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
             return human_readable_labels.get(network, network).replace("\n", " ")
 
     hatch_patterns = {
-        'hub': '/',
-        'edge': '\\'
+        'hub': 'o',
+        'edge': '/'
     }
 
     custom_legend_patches = []
