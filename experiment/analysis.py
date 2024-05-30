@@ -30,14 +30,14 @@ GRAPH_NAMES = {
 }
 
 GRAPH_COLORS = {
-    'fully_connected' : 'purple',
-    'fully_disconnected' : 'pink',
-    'random' : 'orange',
-    'scale_free_correct_edge': '#a6d854',
-    'scale_free_correct_hub': '#4daf4a',
-    'scale_free_incorrect_edge': '#f25355',
-    'scale_free_incorrect_hub': '#e41a1c',
-    'scale_free_unbiased': '#377eb8'
+    'fully_connected' : '#ffb255',
+    'fully_disconnected' : '#ffcd8e',
+    'random' : '#00b0be',
+    'scale_free_correct_edge': '#bdd373',
+    'scale_free_correct_hub': '#98c127',
+    'scale_free_incorrect_edge': '#ff8ca1',
+    'scale_free_incorrect_hub': '#f45f74',
+    'scale_free_unbiased': '#8fd7d7'
 }
 
 def main():
