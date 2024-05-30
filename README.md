@@ -31,8 +31,7 @@ The `run.sh` script runs the experiment pipeline which contains three main steps
 3. Analysing the results and generating figures (`analysis.py`).
 
 ## Testing
-To run the tests, use the following command.
-
+The `/tests` directory contains a number of tests for the codebase. To run the tests, run the following command:
 ```
 cd tests
 poetry run pytest
