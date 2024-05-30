@@ -70,50 +70,48 @@ def accuracy_repartition(network_responses : pd.DataFrame,
 
     return
 
-def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, wrong_response=False) -> None:
-    ''' Save the consensus repartition in res_dir_path location. The program creates a .png image and a .csv file. 
+def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.DataFrame, res_dir_path: Path, graph_colors: dict[str, str]) -> None:
+    ''' Save the combined consensus repartition in res_dir_path location. The program creates separate .png images and .csv files. 
     res_dir_path should lead to a directory, not to a file.
     '''
     # Ensure the directory exists
     Path(res_dir_path).mkdir(parents=True, exist_ok=True)
     
     # Save CSV
-    csv_filename = 'consensus.csv' if not wrong_response else 'consensus_wrong_response.csv'
-    consensus_df.to_csv(res_dir_path / csv_filename, mode='w', sep=',', index=False)
+    consensus_df.to_csv(res_dir_path / 'consensus.csv', mode='w', sep=',', index=False)
+    if wrong_consensus_df is not None:
+        wrong_consensus_df.to_csv(res_dir_path / 'consensus_wrong_response.csv', mode='w', sep=',', index=False)
 
     # Plot for correct_prop
     plt.figure(figsize=(10, 8))
-    sns.histplot(consensus_df, x="correct_prop", color='#377eb8', stat='probability',alpha=1)
-    plt.title(f"Proportion of Agents Correct per Question", fontsize=24)
+    sns.histplot(consensus_df, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Consensus')
+    if wrong_consensus_df is not None:
+        sns.histplot(wrong_consensus_df, x="correct_prop", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Wrong Response Consensus')
+    plt.title("Proportion of Agents Correct per Question", fontsize=24)
+    plt.xlabel("Proportion of Agents Correct", fontsize=20)
+    plt.ylabel("Relative Frequency", fontsize=20)
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
-    title = "Proportion of Agents Correct"
-    if wrong_response:
-        title += " (Incorrect Answers)"
-    plt.xlabel(title, fontsize=20)
-    plt.ylabel("Relative Frequency", fontsize=20)
-    plt.xlim(0,1)
+    plt.xlim(0, 1)
+    plt.legend(fontsize=16)
     plt.tight_layout()
-    correct_prop_filename = 'correct_prop.png' if not wrong_response else 'correct_prop_wrong_responses.png'
-    plt.savefig(res_dir_path / correct_prop_filename, dpi=300)
+    plt.savefig(res_dir_path / 'correct_prop.png', dpi=300)
     plt.close()
 
     # Plot for simpson
     plt.figure(figsize=(10, 8))
-    sns.histplot(consensus_df, x="simpson", color='#377eb8', stat='probability',alpha=1)
-    title = "Simpson Index $\\lambda$ per Question"
-    if wrong_response:
-        title += " (Incorrect Answers)"
-    plt.xlabel(title, fontsize=20)
-    plt.title(title, fontsize=24)
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
+    sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Consensus')
+    if wrong_consensus_df is not None:
+        sns.histplot(wrong_consensus_df, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Wrong Response Consensus')
+    plt.title("Simpson Index $\\lambda$ per Question", fontsize=24)
     plt.xlabel("Simpson Index $\\lambda$", fontsize=20)
     plt.ylabel("Relative Frequency", fontsize=20)
-    plt.xlim(0.2,1)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.xlim(0.2, 1)
+    plt.legend(fontsize=16)
     plt.tight_layout()
-    simpson_filename = 'simpson.png' if not wrong_response else 'simpson_wrong_responses.png'
-    plt.savefig(res_dir_path / simpson_filename, dpi=300)
+    plt.savefig(res_dir_path / 'simpson.png', dpi=300)
     plt.close()
 
 def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path, graph_names: dict[str, str], graph_colors: dict[str, str]) -> None:

@@ -37,9 +37,9 @@ def analyse_simu(agent_response: Path,
     analyse_dir.mkdir(parents=True, exist_ok=True)
 
     # Parse the agent response
-    agent_parsed_resp = parse.parse_output_mmlu(agent_response,
-                                                analyse_dir / f'parsed_responses/{agent_response.name}.csv')
+    agent_parsed_resp = parse.parse_output_mmlu(agent_response, analyse_dir / f'parsed_responses/{agent_response.name}.csv')
     network_responses_df = parse.get_network_responses(agent_parsed_resp, analyse_dir / f'network_responses/{agent_response.name}.csv')
+    agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp, network_responses_df)
 
     # Analyse the responses of this configuration
     results_path = analyse_dir / f'results/{agent_response.name}/'
@@ -50,7 +50,8 @@ def analyse_simu(agent_response: Path,
 
     # Consensus
     consensus_df = calculate_consensus_per_question(agent_parsed_resp)
-    visu.consensus_repartition(consensus_df, results_path)
+    wrong_consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses) if len(agent_parsed_wrong_responses) != 0 else None
+    visu.consensus_repartition(consensus_df, wrong_consensus_df, results_path,graph_colors)
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
@@ -63,17 +64,6 @@ def analyse_simu(agent_response: Path,
     if gifs:
         graphml_path = Path(f'experiment/data/{graph_type}_{network_bias}/{num_agents}.graphml')
         visu.created_gifs(agent_parsed_resp, graphml_path, results_path / f'{agent_response.name}/gifs/')
-
-    # Wrong response consensus
-    agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp,
-                                                             network_responses_df)
-    if len(agent_parsed_wrong_responses) != 0:
-        consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses)
-        visu.consensus_repartition(consensus_df,
-                                results_path,
-                                wrong_response=True)
-    else:
-        print("No wrong responses found")
 
     return graph_type, num_agents, network_bias
 
