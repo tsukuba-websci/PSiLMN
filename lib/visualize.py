@@ -284,6 +284,9 @@ def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_la
             elif 'hub' in network:
                 bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
                 bar.set_hatch('o')  # reverse diagonal lines
+            else:
+                bar.set_facecolor((*bar.get_facecolor()[:3], 0.5))
+                bar.set_hatch('')
         
         plt.xlabel('Network Type', fontsize=20)
         plt.ylabel('Accuracy (%)', fontsize=20)
@@ -337,10 +340,10 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     sns.set_style("white")
 
     def format_label(network):
-        if 'correct' in network:
-            return f"Scale-Free (Correct Bias {network.split('_')[-1].capitalize()})"
-        elif 'incorrect' in network:
+        if 'incorrect' in network:
             return f"Scale-Free (Incorrect Bias {network.split('_')[-1].capitalize()})"
+        elif 'correct' in network:
+            return f"Scale-Free (Correct Bias {network.split('_')[-1].capitalize()})"
         elif 'unbiased' in network:
             return 'Scale-Free (Unbiased)'
         else:
@@ -374,8 +377,12 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
     plt.xticks(xticks, fontsize=16)
     plt.yticks(fontsize=16)
 
-    # Use the custom legend patches for the legend
-    plt.legend(handles=custom_legend_patches, fontsize=14, handlelength=4)
+    # Set the custom order for the legend items
+    custom_legend_order = ['Fully Connected', 'Fully Disconnected', 'Random','Scale-Free (Unbiased)', 'Scale-Free (Correct Bias Hub)', 'Scale-Free (Correct Bias Edge)',
+                           'Scale-Free (Incorrect Bias Hub)', 'Scale-Free (Incorrect Bias Edge)']
+    custom_legend_patches_sorted = sorted(custom_legend_patches, key=lambda patch: custom_legend_order.index(patch.get_label()))
+
+    plt.legend(handles=custom_legend_patches_sorted, fontsize=14, handlelength=4)
     plt.tight_layout()
 
     # Save the plot as a PNG file
@@ -416,6 +423,9 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
             elif 'hub' in network:
                 bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
                 bar.set_hatch('o')  # circles
+            else:
+                bar.set_facecolor((*bar.get_facecolor()[:3], 0.5))
+                bar.set_hatch('')
 
         plt.xlabel('Network Type', fontsize=20)
         plt.ylabel(f'{consensus_label} (%)', fontsize=20)
@@ -465,6 +475,9 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
             elif 'hub' in network:
                 bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
                 bar.set_hatch('o')  # circles
+            else:
+                bar.set_facecolor((*bar.get_facecolor()[:3], 0.5))
+                bar.set_hatch('')
 
         plt.xlabel('Network Type', fontsize=20)
 
