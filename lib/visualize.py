@@ -85,7 +85,7 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
 
     # Plot for correct_prop
     plt.figure(figsize=(12, 8))
-    sns.histplot(consensus_df, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Overall')
+    sns.histplot(consensus_df, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Correct')
     if wrong_consensus_df is not None:
         sns.histplot(wrong_consensus_df, x="correct_prop", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
     plt.title("Proportion of Agents Correct per Question", fontsize=24)
@@ -101,7 +101,7 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
 
     # Plot for simpson
     plt.figure(figsize=(12, 8))
-    sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Overall')
+    sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Correct')
     if wrong_consensus_df is not None:
         sns.histplot(wrong_consensus_df, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
     plt.title("Consensus within the Collective", fontsize=24)

@@ -39,7 +39,6 @@ def analyse_simu(agent_response: Path,
     # Parse the agent response
     agent_parsed_resp = parse.parse_output_mmlu(agent_response, analyse_dir / f'parsed_responses/{agent_response.name}.csv')
     network_responses_df = parse.get_network_responses(agent_parsed_resp, analyse_dir / f'network_responses/{agent_response.name}.csv')
-    agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp, network_responses_df)
 
     # Analyse the responses of this configuration
     results_path = analyse_dir / f'results/{agent_response.name}/'
@@ -49,9 +48,8 @@ def analyse_simu(agent_response: Path,
     visu.accuracy_repartition(network_responses_df, f'{network_bias}', num_agents, results_path)
 
     # Consensus
-    consensus_df = calculate_consensus_per_question(agent_parsed_resp)
-    wrong_consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses) if len(agent_parsed_wrong_responses) != 0 else None
-    visu.consensus_repartition(consensus_df, wrong_consensus_df, results_path,graph_colors)
+    correct_consensus_df, incorrect_consensus_df = calculate_consensus_per_question(agent_parsed_resp, network_responses_df)
+    visu.consensus_repartition(correct_consensus_df, incorrect_consensus_df, results_path,graph_colors)
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
@@ -230,66 +228,55 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
 
     return df_final
 
-def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame) -> pd.DataFrame :
+def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, network_responses_df: pd.DataFrame):
     '''
-        Returns consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
+    Returns consensus measure and Simpson consensus for each question in the parsed_agent_response DataFrame
+    for questions which the system answered correctly and incorrectly.
 
-        Args:
-            parsed_agent_response: The parsed agent response dataframe.
+    Args:
+        parsed_agent_response: The parsed agent response dataframe.
+        network_responses_df: The dataframe containing the system's response information.
 
-        Returns:
-            final_consensus: The consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
+    Returns:
+        correct_consensus: The consensus measure and Simpson consensus for each question answered correctly.
+        incorrect_consensus: The consensus measure and Simpson consensus for each question answered incorrectly.
     '''
-    # Read the CSV file
+    # Filter unbiased responses
     df = parsed_agent_response.query("bias == 'unbiased'")
 
-    num_agent = df['agent_id'].unique().size
-    last_round = df['round'].unique().max()
+    last_round = network_responses_df['round'].max()
 
-    # We select only the correct responses in the last round and remove unecessary columns 
-    correct_prop = df.query(f'round == {last_round}')#[['network_number', 'question_number', 'correct']]
+    # Filter network_responses_df to include only correctly and incorrectly answered questions
+    correct_questions = network_responses_df.query(f"round == {last_round} & correct == True")[['network_number', 'question_number', 'repeat']]
+    incorrect_questions = network_responses_df.query(f"round == {last_round} & correct == False")[['network_number', 'question_number', 'repeat']]
 
-    # We count the proportion of agent with a correct answers for each question
-    correct_prop = correct_prop.groupby(['network_number', 'question_number'])['correct'].mean().reset_index()
-    correct_prop = correct_prop.rename(columns={'correct': 'correct_prop'})
-    
-    # Simpson consensus computation. This accuracy is computed as the probability that two answers
-    # randomly selected are the same.
-    simpson = df.query(f"round == {last_round}").groupby(['network_number', 
-                                                            'question_number', 
-                                                            'parsed_response',
-                                                            'repeat']).size().reset_index(name = 'count')
-    simpson['simpson'] = simpson['count'].apply(lambda count : count/num_agent).apply(lambda p : p*p)
-    simpson = simpson.groupby(['network_number', 'question_number', 'repeat']).sum().reset_index()
+    # Merge with the filtered parsed_agent_response to keep only the correct and incorrect questions
+    correct_df = df.merge(correct_questions, on=['network_number', 'question_number', 'repeat'], how='inner')
+    incorrect_df = df.merge(incorrect_questions, on=['network_number', 'question_number', 'repeat'], how='inner')
 
-    # average on 'repeat'
-    simpson = simpson.groupby(['network_number', 'question_number'])['simpson'].mean().reset_index()
-    simpson = simpson[['network_number', 'question_number','simpson']]
+    # Function to compute consensus
+    def compute_consensus(dataframe):
+        # Calculate correct proportion for each question
+        correct_prop = dataframe.groupby(['network_number', 'question_number', 'repeat'])['correct'].mean().reset_index()
+        correct_prop = correct_prop.rename(columns={'correct': 'correct_prop'})
 
-    # Finally, we join tables
-    final_consensus = pd.merge(correct_prop, simpson, on = ['network_number', 'question_number'])
+        # Calculate Simpson index
+        counts = dataframe.groupby(['network_number', 'question_number', 'repeat', 'parsed_response']).size().reset_index(name='count')
+        total_counts = counts.groupby(['network_number', 'question_number', 'repeat'])['count'].sum().reset_index(name='total')
+        counts = counts.merge(total_counts, on=['network_number', 'question_number', 'repeat'])
+        counts['proportion'] = counts['count'] / counts['total']
+        counts['simpson'] = counts['proportion'] ** 2
 
-    return final_consensus
+        simpson = counts.groupby(['network_number', 'question_number', 'repeat'])['simpson'].sum().reset_index()
 
-def filter_wrong_responses(agent_parsed_responses: pd.DataFrame,
-                           network_responses: pd.DataFrame) -> pd.DataFrame:
-    '''
-        Filter agent parsed rersponses to keep only the lines on which the response of the network is wrong.
+        final_consensus = pd.merge(correct_prop, simpson, on=['network_number', 'question_number', 'repeat'])
 
-        Args:
-            agent_parsed_responses: The parsed agent response dataframe.
-            network_responses: The network response dataframe.
+        return final_consensus
 
-        Returns:
-            res: The filtered agent parsed responses dataframe.
-    '''
-    last_round = network_responses['round'].unique().max()
-    wrong_responses = network_responses.query(f'correct == False & round == {last_round}')
+    # Compute consensus for correct and incorrect questions
+    correct_consensus = compute_consensus(correct_df)
+    incorrect_consensus = compute_consensus(incorrect_df)
 
-    # We create new columns to concatenates the keys which will be used in isin()
-    wrong_responses.loc[:, 'key'] = wrong_responses['network_number'].astype(str) + '_' + wrong_responses['question_number'].astype(str) + '_' + wrong_responses['repeat'].astype(str)
-    agent_parsed_responses.loc[:, 'key'] = agent_parsed_responses['network_number'].apply(str) + '_' + agent_parsed_responses['question_number'].apply(str) + '_' + agent_parsed_responses['repeat'].apply(str)
+    return correct_consensus, incorrect_consensus
 
-    res = agent_parsed_responses[agent_parsed_responses['key'].isin(wrong_responses['key'])]
-    return res.drop(columns='key')
 
