@@ -183,13 +183,7 @@ def make_single_line(filename: str):
     with open(filename, 'w', encoding='utf-8') as outfile:
         outfile.write(modified_content)
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Process some integers.")
-    parser.add_argument("--model", type=str, choices=['gpt-3.5-turbo', 'mistral'], default='gpt-3.5-turbo', help="The model to run the experiment with.")
-    args = parser.parse_args()
-    model = args.model
-
+async def main(model: str):
     output_path = Path("output/agent_responses")
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -206,38 +200,44 @@ if __name__ == "__main__":
                 else:
                     output_file: Path = output_path / Path(f"scale_free_{bias.type}_{bias.location}/network_num_{network_num}_repeat_{repeat_num}.csv")
                 output_file.parent.mkdir(parents=True, exist_ok=True)
-                asyncio.run(test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file, bias=bias))
+                await test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file, bias=bias)
 
     # Test random networks
     network_type = "random"
     for network_num in range(NUM_NETWORKS):
         for repeat_num in range(NUM_REPEATS):
-            output_file= output_path / Path(f"random/network_num_{network_num}_repeat_{repeat_num}.csv")
+            output_file = output_path / Path(f"random/network_num_{network_num}_repeat_{repeat_num}.csv")
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            asyncio.run(test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file))
+            await test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file)
 
     # Test fully connected networks
     network_type = "fully_connected"
     for network_num in range(NUM_NETWORKS):
         for repeat_num in range(NUM_REPEATS):
-            output_file= output_path / Path(f"fully_connected/network_num_{network_num}_repeat_{repeat_num}.csv")
+            output_file = output_path / Path(f"fully_connected/network_num_{network_num}_repeat_{repeat_num}.csv")
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            asyncio.run(test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file))
+            await test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file)
     
     # Test fully disconnected networks
     network_type = "fully_disconnected"
     for network_num in range(NUM_NETWORKS):
         for repeat_num in range(NUM_REPEATS):
-            output_file= output_path / Path(f"fully_disconnected/network_num_{network_num}_repeat_{repeat_num}.csv")
+            output_file = output_path / Path(f"fully_disconnected/network_num_{network_num}_repeat_{repeat_num}.csv")
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            asyncio.run(test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file))
+            await test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file)
 
     end_time = time.time()
     print(f"Time taken: {(end_time - start_time) / 60} minutes")
 
-    # # run post process on csv files
+    # Run post-process on csv files
     csv_files = glob.glob('output/**/*.csv', recursive=True)
     for file in csv_files:
         make_single_line(file)
 
-    pass
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process some integers.")
+    parser.add_argument("--model", type=str, choices=['gpt-3.5-turbo', 'mistral'], default='gpt-3.5-turbo', help="The model to run the experiment with.")
+    args = parser.parse_args()
+    model = args.model
+
+    asyncio.run(main(model))
