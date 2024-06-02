@@ -25,7 +25,7 @@ dotenv.load_dotenv("../.env")
 hf_token = os.getenv("HF_TOKEN")
 
 NUM_NETWORKS = 1
-NUM_QUESTIONS = 4
+NUM_QUESTIONS = 1
 NUM_ROUNDS = 2
 NUM_REPEATS = 1
 
@@ -37,9 +37,11 @@ class Bias:
         self.type = type
         self.location = location
 
-async def test_mmlu(network: Network, output_file: Path, bias: Optional[Bias] = None):
+async def test_mmlu(network_num: int, network_type: str, output_file: Path, bias: Optional[Bias] = None):
     """ Test agent networks with the MMLU dataset. """
-    
+    assert network_type in ["scale_free", "random", "fully_connected", "fully_disconnected"]
+    assert bias is None or isinstance(bias, Bias)
+
     # Load the MMLU dataset
     dataset = load_dataset("lukaemon/mmlu", "high_school_mathematics", revision="3b5949d968d1fbc3facce39769ba00aa13404ffc", trust_remote_code=True, split="test", token = hf_token).to_pandas()
     dataset = dataset.head(NUM_QUESTIONS)
@@ -53,6 +55,9 @@ async def test_mmlu(network: Network, output_file: Path, bias: Optional[Bias] = 
         option_c = row["C"]
         option_d = row["D"]
         correct_response = row["target"]
+
+        # Initiate a new network every time a new question is asked to reset the agents' responses and memory
+        network = Network(path=f"input/{network_type}/{network_num}.graphml", model=model)
 
         unbiased_agent_input = f"Answer the following question as accurately as possible. {question}\n(A) {option_a}\n(B) {option_b}\n(C) {option_c}\n(D) {option_d}\nExplain your answer, putting the answer in the form (A), (B), (C) or (D) with round brackets, at the end of your response."
         if not bias or bias.type == "unbiased":
@@ -106,10 +111,14 @@ async def write_responses_to_csv(file_path: str, responses: list):
 @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6), reraise=True)
 async def get_response(agent: Agent, input: str, round: int):
 
-    # Alter the agents input if the agent is unbiased and has received a response from a neighbor
-    if agent.neighbor_response and agent.bias == "none":
+    # Update the input prompt - the agent is unbiased, has a previous response and has no neighbor responses
+    if (not agent.neighbor_response and agent.response) and agent.bias == "none":
+        input = f"{input}\nBased on your previous response, answer the question again.\nThe following is your previous response: {agent.response}"
+
+    # Update the input prompt - the agent is unbiased, has a previous response and has neighbor responses
+    elif (agent.neighbor_response) and agent.bias == "none":
         input = f"{input}\nBased on your previous response and the solutions of other agents, answer the question again.\nThe following is your previous response: {agent.response}\nThe following are the responses of the other agents:\n{agent.neighbor_response}"
-    
+
     # Get a new response from the agent only if the agent is unbiased or if the agent is biased and it is the first round
     if (agent.bias == "none") or (agent.bias != "none" and round == 0):
         response = await agent.ainterview(input)
@@ -187,9 +196,9 @@ if __name__ == "__main__":
     start_time = time.time()
 
     # Test scale-free networks with different types of biases
-    scale_free_networks: List[Network] = [Network(path=f"input/scale_free/{i}.graphml", model=model) for i in range(NUM_NETWORKS)]
+    network_type = "scale_free"
     biases: List[Bias] = [Bias("unbiased", "none"), Bias("correct", "hub"), Bias("incorrect", "hub"), Bias("correct", "edge"), Bias("incorrect", "edge")]
-    for network_num, network in enumerate(scale_free_networks):
+    for network_num in range(NUM_NETWORKS):
         for bias in biases:
             for repeat_num in range(NUM_REPEATS):
                 if bias.type == "unbiased":
@@ -197,31 +206,31 @@ if __name__ == "__main__":
                 else:
                     output_file: Path = output_path / Path(f"scale_free_{bias.type}_{bias.location}/network_num_{network_num}_repeat_{repeat_num}.csv")
                 output_file.parent.mkdir(parents=True, exist_ok=True)
-                asyncio.run(test_mmlu(network=network, output_file=output_file, bias=bias))
+                asyncio.run(test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file, bias=bias))
 
     # Test random networks
-    random_networks: List[Network] = [Network(path=f"input/random/{i}.graphml", model=model) for i in range(NUM_NETWORKS)]
-    for network_num, network in enumerate(random_networks):
+    network_type = "random"
+    for network_num in range(NUM_NETWORKS):
         for repeat_num in range(NUM_REPEATS):
             output_file= output_path / Path(f"random/network_num_{network_num}_repeat_{repeat_num}.csv")
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            asyncio.run(test_mmlu(network=network, output_file=output_file))
+            asyncio.run(test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file))
 
     # Test fully connected networks
-    fully_connected_networks: List[Network] = [Network(path=f"input/fully_connected/{i}.graphml", model=model) for i in range(NUM_NETWORKS)]
-    for network_num, network in enumerate(fully_connected_networks):
+    network_type = "fully_connected"
+    for network_num in range(NUM_NETWORKS):
         for repeat_num in range(NUM_REPEATS):
             output_file= output_path / Path(f"fully_connected/network_num_{network_num}_repeat_{repeat_num}.csv")
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            asyncio.run(test_mmlu(network=network, output_file=output_file))
+            asyncio.run(test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file))
     
     # Test fully disconnected networks
-    fully_disconnected_networks: List[Network] = [Network(path=f"input/fully_disconnected/{i}.graphml", model=model) for i in range(NUM_NETWORKS)]
-    for network_num, network in enumerate(fully_disconnected_networks):
+    network_type = "fully_disconnected"
+    for network_num in range(NUM_NETWORKS):
         for repeat_num in range(NUM_REPEATS):
             output_file= output_path / Path(f"fully_disconnected/network_num_{network_num}_repeat_{repeat_num}.csv")
             output_file.parent.mkdir(parents=True, exist_ok=True)
-            asyncio.run(test_mmlu(network=network, output_file=output_file))
+            asyncio.run(test_mmlu(network_num=network_num, network_type=network_type, output_file=output_file))
 
     end_time = time.time()
     print(f"Time taken: {(end_time - start_time) / 60} minutes")

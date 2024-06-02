@@ -98,7 +98,7 @@ def save_network(graph: nx.Graph, index: int, title: str, network_type: str) -> 
     load_and_plot_graph(graphml_path, png_path)
 
 def create_random_network(size: int) -> nx.Graph:
-    return nx.erdos_renyi_graph(size, 0.1)
+    return nx.erdos_renyi_graph(size, 0.2)
 
 def create_fully_connected_network(size: int) -> nx.Graph:
     return nx.complete_graph(size)
