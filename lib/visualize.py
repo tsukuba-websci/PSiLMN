@@ -333,70 +333,76 @@ def accuracy_vs_network(input_file_path: str, output_dir: str, human_readable_la
     )
 
 def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
-    csv_files = glob.glob(agent_responses_path, recursive=True)
-    results_df = pd.DataFrame()
-    for csv_file in csv_files:
-        df = pd.read_csv(csv_file)
-        df['network'] = Path(csv_file).parent.name
-        results_df = pd.concat([results_df, df], ignore_index=True, sort=False)
+    for results_type in ['structure', 'bias']:
+        csv_files = glob.glob(agent_responses_path, recursive=True)
+        results_df = pd.DataFrame()
+        for csv_file in csv_files:
+            if results_type == 'bias' and 'scale_free' in csv_file:
+                df = pd.read_csv(csv_file)
+                df['network'] = Path(csv_file).parent.name
+                results_df = pd.concat([results_df, df], ignore_index=True, sort=False)
+            elif results_type == 'structure' and 'edge' not in csv_file and 'hub' not in csv_file:
+                df = pd.read_csv(csv_file)
+                df['network'] = Path(csv_file).parent.name
+                results_df = pd.concat([results_df, df], ignore_index=True, sort=False)
 
-    # Save the combined DataFrame to a CSV file
-    combined_csv_path = Path(output_dir) / 'accuracy_and_round.csv'
-    results_df.to_csv(combined_csv_path, index=False)
+        # Save the combined DataFrame to a CSV file
+        combined_csv_path = Path(output_dir) / 'accuracy_and_round.csv'
+        results_df.to_csv(combined_csv_path, index=False)
 
-    plt.figure(figsize=(16, 9))  # 16:9 aspect ratio
-    sns.set_style("white")
+        plt.figure(figsize=(16, 9))  # 16:9 aspect ratio
+        sns.set_style("white")
 
-    def format_label(network):
-        if 'incorrect' in network:
-            return f"Scale-Free (Incorrect Bias {network.split('_')[-1].capitalize()})"
-        elif 'correct' in network:
-            return f"Scale-Free (Correct Bias {network.split('_')[-1].capitalize()})"
-        elif 'unbiased' in network:
-            return 'Scale-Free (Unbiased)'
-        else:
-            return human_readable_labels.get(network, network).replace("\n", " ")
+        def format_label(network):
+            if 'incorrect' in network:
+                return f"Scale-Free (Incorrect Bias {network.split('_')[-1].capitalize()})"
+            elif 'correct' in network:
+                return f"Scale-Free (Correct Bias {network.split('_')[-1].capitalize()})"
+            elif 'unbiased' in network:
+                return 'Scale-Free (Unbiased)'
+            else:
+                return human_readable_labels.get(network, network).replace("\n", " ")
 
-    hatch_patterns = {
-        'hub': 'o',
-        'edge': '/'
-    }
+        hatch_patterns = {
+            'hub': 'o',
+            'edge': '/'
+        }
 
-    custom_legend_patches = []
+        custom_legend_patches = []
 
-    for network, group in results_df.groupby('network'):
-        x = group['round']
-        y = group['accuracy'] * 100
-        yerr = group['standard_error'] * 100
-        custom_color = graph_colors.get(network, 'gray')
+        for network, group in results_df.groupby('network'):
+            x = group['round']
+            y = group['accuracy'] * 100
+            yerr = group['standard_error'] * 100
+            custom_color = graph_colors.get(network, 'gray')
 
-        hatch = next((pattern for key, pattern in hatch_patterns.items() if key in network), '')
+            hatch = next((pattern for key, pattern in hatch_patterns.items() if key in network), '')
 
-        plt.plot(x + 1, y, marker='o', markersize=5, label=format_label(network), linewidth=3, color=custom_color)
-        plt.fill_between(x + 1, y - yerr, y + yerr, color=custom_color, alpha=0.3, hatch=hatch)
+            plt.plot(x + 1, y, marker='o', markersize=5, label=format_label(network), linewidth=3, color=custom_color)
+            plt.fill_between(x + 1, y - yerr, y + yerr, color=custom_color, alpha=0.3, hatch=hatch)
 
-        custom_legend_patches.append(Patch(facecolor=custom_color, edgecolor='k', hatch=hatch, label=format_label(network)))
+            custom_legend_patches.append(Patch(facecolor=custom_color, edgecolor='k', hatch=hatch, label=format_label(network)))
 
-    plt.xlabel('Round', fontsize=20)
-    plt.ylabel('Accuracy (%)', fontsize=20)
-    plt.title('Accuracy vs Round', fontsize=24)
+        plt.xlabel('Round', fontsize=20)
+        plt.ylabel('Accuracy (%)', fontsize=20)
+        plt.title('Accuracy vs Round', fontsize=24)
 
-    xticks = np.arange(1, len(results_df['round'].unique()) + 1)
-    plt.xticks(xticks, fontsize=16)
-    plt.yticks(fontsize=16)
+        xticks = np.arange(1, len(results_df['round'].unique()) + 1)
+        plt.xticks(xticks, fontsize=16)
+        plt.yticks(fontsize=16)
 
-    # Set the custom order for the legend items
-    custom_legend_order = ['Fully Connected', 'Fully Disconnected', 'Random','Scale-Free (Unbiased)', 'Scale-Free (Correct Bias Hub)', 'Scale-Free (Correct Bias Edge)',
-                           'Scale-Free (Incorrect Bias Hub)', 'Scale-Free (Incorrect Bias Edge)']
-    custom_legend_patches_sorted = sorted(custom_legend_patches, key=lambda patch: custom_legend_order.index(patch.get_label()))
+        # Set the custom order for the legend items
+        custom_legend_order = ['Fully Connected', 'Fully Disconnected', 'Random','Scale-Free (Unbiased)', 'Scale-Free (Correct Bias Hub)', 'Scale-Free (Correct Bias Edge)',
+                            'Scale-Free (Incorrect Bias Hub)', 'Scale-Free (Incorrect Bias Edge)']
+        custom_legend_patches_sorted = sorted(custom_legend_patches, key=lambda patch: custom_legend_order.index(patch.get_label()))
 
-    plt.legend(handles=custom_legend_patches_sorted, fontsize=14, handlelength=4)
-    plt.tight_layout()
+        plt.legend(handles=custom_legend_patches_sorted, fontsize=14, handlelength=4)
+        plt.tight_layout()
 
-    # Save the plot as a PNG file
-    plot_path = Path(output_dir) / 'accuracy_vs_round.png'
-    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    plt.close()
+        # Save the plot as a PNG file
+        plot_path = Path(output_dir) / f'accuracy_vs_round_{results_type}.png'
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        plt.close()
 
 def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
     consensus_types = {'correct_prop': 'Percentage of Agents that Answered Correctly', 'simpson': 'Simpson Index $\\lambda$'}
