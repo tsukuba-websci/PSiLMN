@@ -101,9 +101,9 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
 
     # Plot for simpson
     plt.figure(figsize=(12, 8))
-    sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Correct')
+    sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.5, label='Correct')
     if wrong_consensus_df is not None:
-        sns.histplot(wrong_consensus_df, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
+        sns.histplot(wrong_consensus_df, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.5, label='Incorrect')
     plt.title("Consensus within the Collective", fontsize=24)
     plt.xlabel("Simpson Index $\\lambda$", fontsize=20)
     plt.ylabel("Relative Frequency", fontsize=20)
@@ -121,18 +121,27 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path
     The program creates a .png image and a .csv file.
     res_dir_path should lead to a directory, not to a file.
     '''
+    graph_colors = {'fully_connected': '#fbe0c3',
+    'fully_disconnected': '#e0f6f6',
+    'random': '#e2d0ef',
+    'scale_free_correct_edge': '#d0dfba',
+    'scale_free_correct_hub': '#d0dfba',
+    'scale_free_incorrect_edge': '#e8babc',
+    'scale_free_incorrect_hub': '#e8babc',
+    'scale_free_unbiased': '#c5d3ea'}
+
     # rename evolution column
     df_opinion_evol = df_opinion_evol.rename(columns={'evolution': 'Answer Change'})
 
     # Correctly format the display names
-    title = graph_names.get(bias, bias)
+    title = graph_names.get(bias, bias).replace('\n', ' ').replace('Scale-Free', '')
 
     # Define the custom palette and the order of the hues
     custom_palette = {
         "I $\\rightarrow$ I": graph_colors['scale_free_incorrect_hub'],
         "C $\\rightarrow$ C": graph_colors['scale_free_correct_hub'],
-        "I $\\rightarrow$ C": graph_colors['scale_free_correct_edge'],
-        "C $\\rightarrow$ I": graph_colors['scale_free_incorrect_edge']
+        "I $\\rightarrow$ C": graph_colors['scale_free_unbiased'],
+        "C $\\rightarrow$ I": graph_colors['fully_disconnected']
     }
     hue_order = ["C $\\rightarrow$ C", "I $\\rightarrow$ I", "I $\\rightarrow$ C", "C $\\rightarrow$ I"]
     df_opinion_evol['Answer Change'] = df_opinion_evol['Answer Change'].replace({
@@ -150,8 +159,7 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path
 
     # Create the plot
     plt.figure(figsize=(12, 8))
-    gfg = sns.barplot(data=grouped, x='round', y='percentage', hue='Answer Change', hue_order=hue_order,
-                      palette=custom_palette)
+    gfg = sns.barplot(data=grouped, x='round', y='percentage', hue='Answer Change', hue_order=hue_order, palette=custom_palette, edgecolor='black')
     plt.xlabel("Round Number", fontsize=20)
     plt.ylabel("Percentage of Agents (%)", fontsize=20)
     plt.ylim(0, 70)
@@ -398,6 +406,7 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
         csv_files = glob.glob(input_file_path, recursive=True)
 
         for csv_file in csv_files:
+            print(csv_file)
             df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
             mean = df.mean()
             sem = df.std() / np.sqrt(len(df))
@@ -509,7 +518,8 @@ def neighbours_accuracy(input_file_path: str, output_file_path: str, graph_colou
     sns.kdeplot(data=df, x='proportion_neighbors_correct_previous_round', hue='correct', fill=False, common_norm=False, palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
     plt.title('Agent Correctness by Proportion of Neighbours Correct in Prev. Round',  fontsize=24)
     plt.xlabel('Proportion of Neighbours Correct', fontsize=20)
-    plt.ylabel('Density', fontsize=20)
+    plt.ylabel('Log Probability Density', fontsize=20)
+    plt.yscale('log')
     plt.yticks(fontsize=16)
     plt.xticks(fontsize=16)
     plt.legend(title='Correctness', labels=['Correct', 'Incorrect'], fontsize=16, title_fontsize=16, loc='upper left')

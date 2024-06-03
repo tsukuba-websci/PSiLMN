@@ -53,7 +53,7 @@ def analyse_simu(agent_response: Path,
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
-    visu.opinion_changes(opinion_changes, graph_type, results_path, graph_names, graph_colors)
+    visu.opinion_changes(opinion_changes, f"{graph_type}_{network_bias}", results_path, graph_names, graph_colors)
 
     # Neighbors
     calculate_proportion_neighbours_correct(agent_parsed_resp, graph_type, results_path)

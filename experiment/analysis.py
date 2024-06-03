@@ -31,7 +31,7 @@ GRAPH_NAMES = {
 
 GRAPH_COLORS = {
     'fully_connected': '#F7C088',
-    'fully_disconnected': '#C1EDED',  # slightly lighter dark blue
+    'fully_disconnected': '#C1EDED',
     'random': '#C4A2DF',
     'scale_free_correct_edge': '#a0bf74',
     'scale_free_correct_hub': '#a0bf74',
