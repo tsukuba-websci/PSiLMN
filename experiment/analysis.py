@@ -61,11 +61,8 @@ def main():
     visu.accuracy_vs_round(f"{RESULTS_PATH}**/accuracy_per_round.csv", 
                            RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
 
-    visu.consensus_vs_bias(f"{RESULTS_PATH}**/consensus.csv", 
-                           RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
-
-    visu.consensus_incorrect_vs_bias(f"{RESULTS_PATH}scale_free_**/consensus_wrong_response.csv", 
-                                     RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
+    visu.consensus_table(f"{RESULTS_PATH}**/consensus.csv", 
+                           RESULTS_PATH)
 
     visu.neighbours_accuracy(f"{RESULTS_PATH}**/proportion_neighbors_correct_previous_round.csv", 
                             RESULTS_PATH, GRAPH_COLORS)
