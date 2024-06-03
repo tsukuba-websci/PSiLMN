@@ -412,7 +412,6 @@ def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labe
         csv_files = glob.glob(input_file_path, recursive=True)
 
         for csv_file in csv_files:
-            print(csv_file)
             df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
             mean = df.mean()
             sem = df.std() / np.sqrt(len(df))

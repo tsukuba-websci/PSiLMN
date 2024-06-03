@@ -72,7 +72,7 @@ def graphml_to_json(filename: str, output_path: str, static: bool = False) -> No
     with open(os.path.join(output_path, outfilename), "w") as outfile:
         json.dump(out, outfile, indent=4)
 
-def save_network(graph: nx.Graph, index: int, title: str, network_type: str) -> None:
+def save_network(graph: nx.Graph, index: int, network_type: str) -> None:
     """
     Save a network to disk.
     
@@ -150,10 +150,10 @@ if __name__ == "__main__":
 
     # Save all the networks
     for index, network in enumerate(scale_free_networks):
-        save_network(graph=network, index=index, title=f"Scale-Free Network {index}", network_type="scale_free")
+        save_network(graph=network, index=index, network_type="scale_free")
     for index, network in enumerate(random_networks):
-        save_network(graph=network, index=index, title=f"Random Network {index}", network_type="random")
+        save_network(graph=network, index=index, network_type="random")
     for index, network in enumerate(fully_connected_networks):
-        save_network(graph=network, index=index, title=f"Fully Connected Network {index}", network_type="fully_connected")
+        save_network(graph=network, index=index, network_type="fully_connected")
     for index, network in enumerate(fully_disconnected_networks):
-        save_network(graph=network, index=index, title=f"Fully Disconnected Network {index}", network_type="fully_disconnected")
+        save_network(graph=network, index=index, network_type="fully_disconnected")
