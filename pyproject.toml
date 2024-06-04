@@ -23,7 +23,6 @@ lorem-text = "^2.1"
 aiofiles = "^23.2.1"
 tenacity = "^8.2.3"
 transformers = "^4.39.0"
-torch = "^2.3.0"
 seaborn = "^0.13.2"
 
 

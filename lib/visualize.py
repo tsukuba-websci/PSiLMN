@@ -71,7 +71,7 @@ def accuracy_repartition(network_responses : pd.DataFrame,
 
     return
 
-def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.DataFrame, res_dir_path: Path, graph_colors: dict[str, str]) -> None:
+def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, graph_colors: dict[str, str]) -> None:
     ''' Save the combined consensus repartition in res_dir_path location. The program creates separate .png images and .csv files. 
     res_dir_path should lead to a directory, not to a file.
     '''
@@ -80,14 +80,14 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
     
     # Save CSV
     consensus_df.to_csv(res_dir_path / 'consensus.csv', mode='w', sep=',', index=False)
-    if wrong_consensus_df is not None:
-        wrong_consensus_df.to_csv(res_dir_path / 'consensus_wrong_response.csv', mode='w', sep=',', index=False)
+
+    consensus_correct = consensus_df.query("network_correct == 'true'")
+    consensus_incorrect = consensus_df.query("network_correct == 'false'")
 
     # Plot for correct_prop
     plt.figure(figsize=(12, 8))
-    sns.histplot(consensus_df, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Correct')
-    if wrong_consensus_df is not None:
-        sns.histplot(wrong_consensus_df, x="correct_prop", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
+    sns.histplot(consensus_correct, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Correct')
+    sns.histplot(consensus_incorrect, x="correct_prop", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
     plt.title("Proportion of Agents Correct per Question", fontsize=24)
     plt.xlabel("Proportion of Agents Correct", fontsize=20)
     plt.ylabel("Relative Frequency", fontsize=20)
@@ -101,9 +101,8 @@ def consensus_repartition(consensus_df: pd.DataFrame, wrong_consensus_df: pd.Dat
 
     # Plot for simpson
     plt.figure(figsize=(12, 8))
-    sns.histplot(consensus_df, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.5, label='Correct')
-    if wrong_consensus_df is not None:
-        sns.histplot(wrong_consensus_df, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.5, label='Incorrect')
+    sns.histplot(consensus_correct, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.5, label='Correct')
+    sns.histplot(consensus_incorrect, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.5, label='Incorrect')
     plt.title("Consensus within the Collective", fontsize=24)
     plt.xlabel("Simpson Index $\\lambda$", fontsize=20)
     plt.ylabel("Relative Frequency", fontsize=20)
@@ -404,108 +403,37 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         plt.close()
 
-def consensus_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
-    consensus_types = {'correct_prop': 'Percentage of Agents that Answered Correctly', 'simpson': 'Simpson Index $\\lambda$'}
+def consensus_table(input_file_path: str, output_dir: str):
+    """
+        Compute average consensus for each graph. Three values are computed for each graph :
+    the average consensus, average only for questions the network responded correctly and average
+    only for question the network responded wrongly.
 
-    for consensus_type, consensus_label in consensus_types.items():
-        results_df = pd.DataFrame(columns=['network', consensus_type, 'standard_error'])
-        csv_files = glob.glob(input_file_path, recursive=True)
+    input_file_path is a regular expression leading to all the consensus.csv file of each network.
+    res_file_path should lead to a repertory, not to a file.
+    """
+    csv_files = glob.glob(input_file_path)
+    data_res = []
 
-        for csv_file in csv_files:
-            df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
-            mean = df.mean()
-            sem = df.std() / np.sqrt(len(df))
-            results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
+    for file in csv_files:
+        df = pd.read_csv(file, delimiter = ',')
 
-        results_path = Path(output_dir) / f'{consensus_type}_and_bias.csv'
-        custom_order = ['fully_connected','fully_disconnected', 'random', 'scale_free_unbiased', 'scale_free_incorrect_hub', 'scale_free_incorrect_edge', 'scale_free_correct_hub', 'scale_free_correct_edge']
-        results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
-        results_df = results_df.sort_values(by='network_order')
-        results_df.to_csv(results_path, index=False)
+        # Network name
+        network = file.split("/")[-2]
 
-        network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
-        plt.figure(figsize=(12, 8))
+        # Consensus metrics
+        overall = df['simpson'].mean()
+        correct = df.query("network_correct == True")['simpson'].mean()
+        incorrect = df.query("network_correct == False")['simpson'].mean()
 
-        bars = plt.bar(range(len(results_df['network'])), results_df[consensus_type]*100, yerr=results_df['standard_error']*100, capsize=5, color=network_colors, ecolor=(0, 0, 0, 0.3))
-
-        # Apply hatching based on labels
-        for bar, network, color in zip(bars, results_df['network'], network_colors):
-            bar.set_edgecolor("k")  # Set the edge color to match the bar color
-            if 'edge' in network:
-                bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
-                bar.set_hatch('/')  # diagonal lines
-            elif 'hub' in network:
-                bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
-                bar.set_hatch('o')  # circles
-            else:
-                bar.set_facecolor((*bar.get_facecolor()[:3], 0.5))
-                bar.set_hatch('')
-
-        plt.xlabel('Network Type', fontsize=20)
-        plt.ylabel(f'{consensus_label} (%)', fontsize=20)
-        plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], fontsize=12)
-        plt.yticks(fontsize=16)
-        plt.ylim(0, 100)
-        plt.title(f'{consensus_label}', fontsize=24)
-        plt.tight_layout()
-        plt.savefig(Path(output_dir) / f'{consensus_type}_vs_bias.png', dpi=300, bbox_inches='tight')
-        plt.close()
-        
-def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
-
-    consensus_types = {
-        'correct_prop': 'Consensus of Incorrect Answers',
-        'simpson': 'Average Simpson Index $\\lambda$ (Incorrect Answers)'
-    }
-
-    for consensus_type, consensus_label in consensus_types.items():
-        results_df = pd.DataFrame(columns=['network', consensus_type, 'standard_error'])
-        csv_files = glob.glob(input_file_path, recursive=True)
-
-        for csv_file in csv_files:
-            df = pd.read_csv(csv_file).get(consensus_type, pd.Series())
-            mean = df.mean()
-            sem = df.std() / np.sqrt(len(df))
-            results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name], consensus_type: mean, 'standard_error': sem})], ignore_index=True)
-
-        custom_order = ['scale_free_unbiased', 'scale_free_incorrect_hub', 'scale_free_incorrect_edge', 'scale_free_correct_hub', 'scale_free_correct_edge']
-        results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
-        results_df = results_df.sort_values(by='network_order')
-
-        results_path = Path(output_dir) / f'{consensus_type}_incorrect_and_bias.csv'
-        results_df.to_csv(results_path, index=False)
-
-        network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
-        plt.figure(figsize=(12, 8))
-
-        bars = plt.bar(range(len(results_df['network'])), results_df[consensus_type], yerr=results_df['standard_error'], capsize=5, color=network_colors, ecolor=(0, 0, 0, 0.3))
-
-        # Apply hatching based on labels
-        for bar, network, color in zip(bars, results_df['network'], network_colors):
-            bar.set_edgecolor("k")  # Set the edge color to match the bar color
-            if 'edge' in network:
-                bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
-                bar.set_hatch('/')  # diagonal lines
-            elif 'hub' in network:
-                bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
-                bar.set_hatch('o')  # circles
-            else:
-                bar.set_facecolor((*bar.get_facecolor()[:3], 0.5))
-                bar.set_hatch('')
-
-        plt.xlabel('Network Type', fontsize=20)
-
-        if consensus_type == 'simpson':
-            plt.ylabel(f'Simpson Index $\\lambda$', fontsize=20)
-        else:
-            plt.ylabel(f'{consensus_label}', fontsize=20)
-        plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], fontsize=16)
-        plt.yticks(fontsize=16)
-        plt.ylim(0, 1)
-        plt.title(f'{consensus_label} vs Bias Type', fontsize=24)
-        plt.tight_layout()
-        plt.savefig(Path(output_dir) / f'{consensus_type}_incorrect_vs_bias.png', dpi=300, bbox_inches='tight')
-        plt.close()
+        data_res.append([network, overall, correct, incorrect])
+    
+    res = pd.DataFrame(columns= ["network_type", 
+                                 "overall_consensus", 
+                                 "correct_response_consensus", 
+                                 "incorrect_response_consensus"],
+                        data = data_res)
+    res.to_csv(Path(output_dir) / "consensus_table.csv", index = False)
         
 def neighbours_accuracy(input_file_path: str, output_file_path: str, graph_colours: dict[str, str]) -> None:
     csv_files = glob.glob(input_file_path, recursive=True)
