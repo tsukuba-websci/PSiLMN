@@ -511,23 +511,26 @@ def neighbours_accuracy(input_file_path: str, output_file_path: str, graph_colou
     csv_files = glob.glob(input_file_path, recursive=True)
     df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
 
-    # Filter out the first round
-    df = df[df['round'] != 0]
+    # df['correct'] = df['correct'].astype('category')
 
-    # Filter out the biased agents
-    df = df.query("bias == 'unbiased'").copy()
-    df['correct'] = df['correct'].astype('category')
-    
+    df = df[['correct_this_round', 'correct_prev_round','prop_correct_neighbors']]
+    df.to_csv(Path(output_file_path) / 'neighbours_accuracy.csv', index = False)
+    df = df.groupby(["prop_correct_neighbors", "correct_prev_round" ]).mean().reset_index()
+
     plt.figure(figsize=(12, 8))
     custom_palette = {True: graph_colours['scale_free_correct_hub'], False: graph_colours['scale_free_incorrect_hub']}
-    sns.kdeplot(data=df, x='proportion_neighbors_correct_previous_round', hue='correct', fill=False, common_norm=False, palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
+    sns.scatterplot(data=df, x='prop_correct_neighbors', y="correct_this_round",
+                hue='correct_prev_round', palette=custom_palette)
+    # sns.kdeplot(data=df, x='prop_correct_neighbors', y="correct_this_round",
+    #              stat="probability",
+    #             hue='correct_prev_round', fill=False, common_norm=False, 
+    #             palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
     plt.title('Agent Correctness by Proportion of Neighbours Correct in Prev. Round',  fontsize=24)
     plt.xlabel('Proportion of Neighbours Correct', fontsize=20)
-    plt.ylabel('Log Probability Density', fontsize=20)
-    plt.yscale('log')
+    plt.ylabel('Probability of being correct', fontsize=20)
     plt.yticks(fontsize=16)
     plt.xticks(fontsize=16)
-    plt.legend(title='Correctness', labels=['Correct', 'Incorrect'], fontsize=16, title_fontsize=16, loc='upper left')
+    plt.legend(title='Answer previous round', labels=['Correct', 'Incorrect'], fontsize=16, title_fontsize=16, loc='upper left')
     plt.tight_layout()
     plt.savefig(f"{output_file_path}neighbours_accuracy.png", dpi=300)
 

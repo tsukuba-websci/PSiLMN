@@ -47,6 +47,7 @@ def main():
 
     response_dirs = [Path(str_path) for str_path in glob(f'{AGENT_RESPONSES_PATH}*', recursive=False)]
     for response_path in response_dirs:
+        print(response_path.name)
         analyse.analyse_simu(agent_response=response_path, 
                             analyse_dir=Path(OUTPUT_ANALYSIS_PATH),
                             graph_names=GRAPH_NAMES,
