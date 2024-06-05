@@ -181,51 +181,64 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
     Returns:
         pd.DataFrame: The original DataFrame with an added column for the proportion of correct neighbors from the previous round.
     """
-    # Filter for unbiased responses
-    df = parsed_agent_response.copy()
-    df['agent_id_str'] = df['agent_id'].astype(str)  # Convert agent_id to string once
+    df_final = pd.DataFrame(columns = ["network_number", "round", "question_number", "repeat", 
+                                        "agent_id", "correct_prev_round", "correct_this_round", 
+                                        "prop_correct_neighbors"])
+    if graph_type == "fully_disconnected":
+        df_final.to_csv(Path(final_res_path) / 'proportion_neighbors_correct_previous_round.csv', index=False)
+        return df_final
 
-    new_data = []
-
-    # Iterate over each unique combination of network number, round, question number, and repeat
-    for (network_num, round_, question_number, repeat), df_group in df.groupby(['network_number', 'round', 'question_number', 'repeat']):
+    df = parsed_agent_response.copy().drop(['parsed_response','correct_response'], axis=1)
+    for network_num in df['network_number'].unique():
+        # We load the graph and build a pandas table containing all the edges
         graphml_path = Path(f'input/{graph_type}/{network_num}.graphml')
         G = nx.read_graphml(graphml_path)
-        
-        # Check if the previous round exists
-        if round_ > 0:
-            # Filter the DataFrame for the previous round
-            df_previous_round = df.query(f"network_number == {network_num} and round == {round_ - 1} and question_number == {question_number} and repeat == {repeat}")
 
-            # Iterate over each agent in the current group
-            for agent_id_str in df_group['agent_id_str'].unique():
-                if agent_id_str in G:
-                    neighbors = list(G.neighbors(agent_id_str))
-                    # Filter for neighbors' correctness in the previous round
-                    df_neighbors_previous_round = df_previous_round[df_previous_round['agent_id_str'].isin(neighbors)]
-                    proportion_correct_previous_round = df_neighbors_previous_round['correct'].mean() if not df_neighbors_previous_round.empty else None
-                else:
-                    proportion_correct_previous_round = None  # If agent_id not in graph, set proportion as None
-                
-                new_data.append({
-                    'network_number': network_num,
-                    'agent_id': int(agent_id_str),  # Convert back to int if necessary
-                    'round': round_,
-                    'question_number': question_number,
-                    'repeat': repeat,
-                    'proportion_neighbors_correct_previous_round': proportion_correct_previous_round
-                })
-    
-    # Convert new data to DataFrame
-    results_df = pd.DataFrame(new_data)
-    # Specify columns to merge on, including new dimensions
-    merge_cols = ['network_number', 'agent_id', 'round', 'question_number', 'repeat']
-    # Merge the new data back into the original DataFrame
-    df_final = pd.merge(parsed_agent_response, results_df, on=merge_cols, how='left')
+        network_df = df.query(f"network_number == {network_num}")
+        edge_list = []
+        for edge in G.edges:
+            edge_list.append([int(edge[0]), int(edge[1])])
+            edge_list.append([int(edge[1]), int(edge[0])])
+        df_edges = pd.DataFrame(columns = ["agent_id", "neihgbour_id"], data = edge_list).drop_duplicates()
 
-    # Save csv
-    df_final.to_csv(final_res_path / 'proportion_neighbors_correct_previous_round.csv', index=False)
+        # Iterate over each unique combination of network number, question number, and repeat
+        for round in network_df['round'].unique():
+            if round == 0: # First round is skipped because it does not have a previous round
+                continue
+            # Cartesian product of each agent with all its neighbors for the given round
+            partial_res_df = network_df.query(f"round == {round} & bias == 'unbiased'").merge(df_edges, on="agent_id")
+            
+            # We select the previous round responses and merge them with the cartesian product dataframe to have each
+            # node's neihgbor response
+            neihgbours_responses = network_df.query(f"round == {round-1}").rename(columns={"agent_id": "neihgbour_id",
+                                                                                           "correct": "correct_neihbour"})
+            partial_res_df = partial_res_df.merge(neihgbours_responses, 
+                                                  on = ["neihgbour_id", "question_number", "repeat"])
+            
+            # We aggregate the result by doing the mean over all the neihbours responses
+            partial_res_df = partial_res_df.groupby(["agent_id", 
+                                                    "question_number", 
+                                                    "repeat",
+                                                    "correct"]).agg(prop_correct_neighbors=("correct_neihbour", "mean")).reset_index()
+            
+            # Add missing data
+            partial_res_df = partial_res_df.rename(columns={"correct": "correct_this_round"})
+            partial_res_df['network_number'] = network_num
+            partial_res_df['round'] = round
 
+            # We use merge to add 1 last boolean columns: correct_previous_round
+            previous_round = network_df.query(f"round == {round-1}")[["agent_id", "question_number", 
+                                                                    "repeat", "correct"]]
+            previous_round = previous_round.rename(columns={"correct": "correct_prev_round"})
+            partial_res_df = partial_res_df.merge(previous_round, on=["agent_id", "question_number","repeat"])
+
+            # Concatenation to final result
+            if df_final.empty:
+                df_final = partial_res_df
+            else:
+                df_final = pd.concat([df_final, partial_res_df])
+
+    df_final.to_csv(Path(final_res_path) / 'proportion_neighbors_correct_previous_round.csv', index=False)
     return df_final
 
 def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, network_responses_df: pd.DataFrame):

@@ -54,7 +54,6 @@ def main():
                             gifs = False)
         visu.neighbours_accuracy(f"{RESULTS_PATH}/{response_path.name}/**/proportion_neighbors_correct_previous_round.csv", 
                         f"{RESULTS_PATH}/{response_path.name}/", GRAPH_COLORS)
-
     visu.accuracy_vs_network(f"{RESULTS_PATH}**/accuracy_per_network_and_repeat.csv", 
                           RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
 
