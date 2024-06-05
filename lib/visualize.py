@@ -519,7 +519,7 @@ def neighbours_accuracy(input_file_path: str, output_file_path: str, graph_colou
 
     plt.figure(figsize=(12, 8))
     custom_palette = {True: graph_colours['scale_free_correct_hub'], False: graph_colours['scale_free_incorrect_hub']}
-    sns.scatterplot(data=df, x='prop_correct_neighbors', y="correct_this_round",
+    sns.lmplot(data=df, x='prop_correct_neighbors', y="correct_this_round",
                 hue='correct_prev_round', palette=custom_palette)
     # sns.kdeplot(data=df, x='prop_correct_neighbors', y="correct_this_round",
     #              stat="probability",
