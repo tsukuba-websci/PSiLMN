@@ -445,7 +445,7 @@ def correct_prop_vs_network(input_file_path: str, output_dir: str, human_readabl
     plt.ylabel("Percentage of Agents that Answered Correctly (%)", fontsize=20)
     plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], fontsize=12)
     plt.yticks(fontsize=16)
-    plt.ylim(0, 100)
+    plt.ylim(0, 80)
     plt.title("Percentage of Agents that Answered Correctly", fontsize=24)
     plt.tight_layout()
     plt.savefig(Path(output_dir) / "correct_prop_vs_network_type.png", dpi=300, bbox_inches='tight')
