@@ -407,6 +407,50 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
         plt.savefig(plot_path, dpi=300, bbox_inches='tight')
         plt.close()
 
+def correct_prop_vs_network(input_file_path: str, output_dir: str, human_readable_labels: dict[str, str], graph_colors: dict[str, str]) -> None:
+    results_df = pd.DataFrame(columns=['network', "correct_prop", 'standard_error'])
+    csv_files = glob.glob(input_file_path, recursive=True)
+
+    for csv_file in csv_files:
+        df = pd.read_csv(csv_file).get("correct_prop", pd.Series())
+        mean = df.mean()
+        sem = df.std() / np.sqrt(len(df))
+        results_df = pd.concat([results_df if not results_df.empty else None, pd.DataFrame({'network': [Path(csv_file).parent.name], "correct_prop": mean, 'standard_error': sem})], ignore_index=True)
+
+    results_path = Path(output_dir) / "correct_prop_and_network_type.csv"
+    custom_order = ['fully_connected','fully_disconnected', 'random', 'scale_free_unbiased', 'scale_free_incorrect_hub', 'scale_free_incorrect_edge', 'scale_free_correct_hub', 'scale_free_correct_edge']
+    results_df['network_order'] = results_df['network'].apply(lambda x: custom_order.index(x))
+    results_df = results_df.sort_values(by='network_order')
+    results_df.to_csv(results_path, index=False)
+
+    network_colors = [graph_colors.get(network, 'gray') for network in results_df['network']]
+    plt.figure(figsize=(12, 8))
+
+    bars = plt.bar(range(len(results_df['network'])), results_df["correct_prop"]*100, yerr=results_df['standard_error']*100, capsize=5, color=network_colors, ecolor=(0, 0, 0, 0.3))
+
+    # Apply hatching based on labels
+    for bar, network, color in zip(bars, results_df['network'], network_colors):
+        bar.set_edgecolor("k")  # Set the edge color to match the bar color
+        if 'edge' in network:
+            bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
+            bar.set_hatch('/')  # diagonal lines
+        elif 'hub' in network:
+            bar.set_facecolor((*bar.get_facecolor()[:3], 0.3))
+            bar.set_hatch('o')  # circles
+        else:
+            bar.set_facecolor((*bar.get_facecolor()[:3], 0.5))
+            bar.set_hatch('')
+
+    plt.xlabel('Network Type', fontsize=20)
+    plt.ylabel("Percentage of Agents that Answered Correctly (%)", fontsize=20)
+    plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], fontsize=12)
+    plt.yticks(fontsize=16)
+    plt.ylim(0, 100)
+    plt.title("Percentage of Agents that Answered Correctly", fontsize=24)
+    plt.tight_layout()
+    plt.savefig(Path(output_dir) / "correct_prop_vs_network_type.png", dpi=300, bbox_inches='tight')
+    plt.close()
+
 def consensus_table(input_file_path: str, output_dir: str):
     """
         Compute average consensus for each graph. Three values are computed for each graph :

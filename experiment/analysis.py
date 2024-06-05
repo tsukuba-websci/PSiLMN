@@ -44,7 +44,7 @@ def main():
     Path(PARSED_RESPONSES_PATH).mkdir(parents=True, exist_ok=True)
     Path(NETWORK_REPONSES_PATH).mkdir(parents=True, exist_ok=True)
     Path(RESULTS_PATH).mkdir(parents=True, exist_ok=True)
-
+    
     response_dirs = [Path(str_path) for str_path in glob(f'{AGENT_RESPONSES_PATH}*', recursive=False)]
     for response_path in response_dirs:
         analyse.analyse_simu(agent_response=response_path, 
@@ -60,6 +60,9 @@ def main():
 
     visu.accuracy_vs_round(f"{RESULTS_PATH}**/accuracy_per_round.csv", 
                            RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
+    
+    visu.correct_prop_vs_network(f"{RESULTS_PATH}**/consensus.csv",
+                                 RESULTS_PATH, GRAPH_NAMES, GRAPH_COLORS)
 
     visu.consensus_table(f"{RESULTS_PATH}**/consensus.csv", 
                            RESULTS_PATH)
