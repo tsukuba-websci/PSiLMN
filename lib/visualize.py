@@ -84,6 +84,8 @@ def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, graph_
     consensus_correct = consensus_df.query("network_correct == 'true'")
     consensus_incorrect = consensus_df.query("network_correct == 'false'")
 
+    network_type = res_dir_path.name
+
     # Plot for correct_prop
     plt.figure(figsize=(12, 8))
     sns.histplot(consensus_correct, x="correct_prop", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.6, label='Correct')
@@ -103,15 +105,15 @@ def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, graph_
     plt.figure(figsize=(12, 8))
     sns.histplot(consensus_correct, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.5, label='Correct')
     sns.histplot(consensus_incorrect, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.5, label='Incorrect')
-    plt.title("Consensus within the Collective", fontsize=24)
-    plt.xlabel("Simpson Index $\\lambda$", fontsize=20)
-    plt.ylabel("Relative Frequency", fontsize=20)
-    plt.xticks(fontsize=16)
-    plt.yticks(fontsize=16)
+    plt.title("Consensus within the Collective", fontsize=28)
+    plt.xlabel("Simpson Index $\\lambda$", fontsize=28)
+    plt.ylabel("Relative Frequency", fontsize=28)
+    plt.xticks(fontsize=24)
+    plt.yticks(fontsize=24)
     plt.xlim(0.2, 1)
-    plt.legend(fontsize=16)
+    plt.legend(fontsize=24)
     plt.tight_layout()
-    plt.savefig(res_dir_path / 'simpson.png', dpi=300)
+    plt.savefig(res_dir_path / f'simpson_{network_type}.png', dpi=300)
     plt.close()
 
 def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path, graph_names: dict[str, str], graph_colors: dict[str, str]) -> None:
@@ -128,6 +130,8 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path
     'scale_free_incorrect_edge': '#e8babc',
     'scale_free_incorrect_hub': '#e8babc',
     'scale_free_unbiased': '#c5d3ea'}
+
+    network_type = res_dir_path.name
 
     # rename evolution column
     df_opinion_evol = df_opinion_evol.rename(columns={'evolution': 'Answer Change'})
@@ -161,7 +165,7 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path
     gfg = sns.barplot(data=grouped, x='round', y='percentage', hue='Answer Change', hue_order=hue_order, palette=custom_palette, edgecolor='black')
     plt.xlabel("Round Number", fontsize=20)
     plt.ylabel("Percentage of Agents (%)", fontsize=20)
-    plt.ylim(0, 70)
+    plt.ylim(0, 80)
     # Define the custom x-tick labels
     round_transitions = {0: "1 $\\rightarrow$ 2", 1: "2 $\\rightarrow$ 3", 2: "3 $\\rightarrow$ 4"}
 
@@ -178,7 +182,7 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path
     # Save the figure and data
     Path(res_dir_path).mkdir(parents=True, exist_ok=True)
     df_opinion_evol.to_csv(res_dir_path / 'opinion_changes.csv', mode='w', sep=',', index=False)
-    plt.savefig(res_dir_path / 'opinion_changes.png', dpi=300)
+    plt.savefig(res_dir_path / f'opinion_changes_{network_type}.png', dpi=300)
     plt.close('all')
 
 ### Cross simulation plot
