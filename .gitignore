@@ -7,4 +7,6 @@
 *.gif
 /output
 temp.py
-experiment/output/**/*.png
+*.png
+!/experiment/input/**/*.png
+*.pyc

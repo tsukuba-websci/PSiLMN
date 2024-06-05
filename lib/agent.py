@@ -3,19 +3,16 @@ from tenacity import retry, stop_after_attempt, wait_random_exponential, retry_i
 from typing import Any, Dict, List, Optional
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
-import dotenv
 from faker import Faker
 from lib.memory import Memory
 from langchain_community.llms import Ollama
 from langchain_openai import ChatOpenAI
 import random
 
-dotenv.load_dotenv("../.env")
-
 class Agent:
     """Generative Agent"""
 
-    def __init__(self, id: str, bias: str = "None", model: str = "mistral") -> None:
+    def __init__(self, id: str, bias: str = "none", model: str = "mistral") -> None:
 
         if "mistral" in model:
             llm = Ollama(model="mistral")
@@ -37,7 +34,7 @@ class Agent:
         self.neighbor_response = ""
         self.llm = llm
         self.memory = Memory(model=model)
-        self.bias = bias 
+        self.bias = bias
 
     @staticmethod
     def _parse_list(text: str) -> List[str]:

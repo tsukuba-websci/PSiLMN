@@ -11,17 +11,20 @@ import networkx as nx
 
 pd.options.mode.chained_assignment = None
 
-def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str, str], graph_colors: dict[str, str], gifs = False) -> Tuple[Path, str, int, str]:
+def analyse_simu(agent_response: Path, 
+                analyse_dir: Path,
+                graph_names,
+                graph_colors,
+                gifs = False) -> Tuple[str, int, str]:
     '''
         Analyse the respones of agents from a single simulation run.
 
         Args:
             agent_response: Path to the agent response CSV file.
             analyse_dir: Path to the directory where the analysis results will be saved.
-            figs: Boolean to determine if the figures should be created or not.
+            gifs: Boolean to determine if the figures should be created or not.
 
         Returns:
-            final_res_path: Path to the directory where the analysis results are saved.
             graph_type: The type of graph used in the simulation.
             num_agents: The number of agents in the simulation.
             network_bias: The type of network bias used in the simulation.
@@ -30,76 +33,68 @@ def analyse_simu(agent_response: Path, analyse_dir: Path, graph_names: dict[str,
     # Parse the file name
     num_agents, graph_type, network_bias = parse_file_path(agent_response)
 
-    # Create the final result directory
-    final_res_path = analyse_dir / f'{network_bias}/'
-    final_res_path.mkdir(parents=True, exist_ok=True)
+    # Create the final result directories
+    analyse_dir.mkdir(parents=True, exist_ok=True)
 
     # Parse the agent response
-    agent_parsed_resp = parse.parse_output_mmlu(agent_response, final_res_path / 'agent_response_parsed.csv')
-    network_responses_df = parse.get_network_responses(agent_parsed_resp, final_res_path / 'network_responses.csv')
+    agent_parsed_resp = parse.parse_output_mmlu(agent_response, analyse_dir / f'parsed_responses/{agent_response.name}.csv')
+    network_responses_df = parse.get_network_responses(agent_parsed_resp, analyse_dir / f'network_responses/{agent_response.name}.csv')
 
-    # Analyse the responses
-    
+    # Analyse the responses of this configuration
+    results_path = analyse_dir / f'results/{agent_response.name}/'
+    Path(results_path).mkdir(exist_ok=True)
+
     # Accuracy
-    visu.accuracy_repartition(network_responses_df,
-                              network_bias,
-                              num_agents,
-                              final_res_path)
+    visu.accuracy_repartition(network_responses_df, f'{network_bias}', num_agents, results_path)
 
     # Consensus
-    consensus_df = calculate_consensus_per_question(agent_parsed_resp,network_bias)
-    visu.consensus_repartition(consensus_df, graph_type, num_agents, final_res_path)
+    consensus_df = calculate_consensus_per_question(agent_parsed_resp, network_responses_df)
+    visu.consensus_repartition(consensus_df, results_path, graph_colors)
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)
+    visu.opinion_changes(opinion_changes, f"{graph_type}_{network_bias}", results_path, graph_names, graph_colors)
 
-    # Get correctness by proportion of correct neighbours
-    visu.opinion_changes(opinion_changes, network_bias, final_res_path, graph_names, graph_colors)
-    calculate_proportion_neighbours_correct(agent_parsed_resp, graph_type, final_res_path)
+    # Neighbors
+    calculate_proportion_neighbours_correct(agent_parsed_resp, graph_type, results_path)
 
-    # Figs
+    # Gifs
     if gifs:
-        for network_num in range(3):
-            graphml_path = Path(f'data/{graph_type}/{network_num}.graphml')
-            visu.created_gifs(agent_parsed_resp, graphml_path, final_res_path / f'gifs/{network_num}/', network_num= network_num, graph_colors= graph_colors)
+        graphml_path = Path(f'experiment/data/{graph_type}_{network_bias}/{num_agents}.graphml')
+        visu.created_gifs(agent_parsed_resp, graphml_path, results_path / f'{agent_response.name}/gifs/')
 
-    # Wrong response consensus
-    agent_parsed_wrong_responses = filter_wrong_responses(agent_parsed_resp,
-                                                             network_responses_df)
-    consensus_df = calculate_consensus_per_question(agent_parsed_wrong_responses, network_bias)
-    visu.consensus_repartition(consensus_df,
-                               f'{graph_type} (wrong ansers only)',
-                               num_agents,
-                               final_res_path,
-                               wrong_response= True)
+    return graph_type, num_agents, network_bias
 
-    return final_res_path, graph_type, num_agents, network_bias
-
-def parse_file_path(file_path : Path) -> Tuple[int, str, str]:
+def parse_file_path(dir_path : Path) -> Tuple[int, str, str]:
     '''
         Parse the file_path to determine the number of agents, the network bias the network type.
 
         Args:
-            file_path: Path to the agent response CSV file.
+            dir_path: Path to the agent response directory.
 
         Returns:
-            num_agents: The number of agents in the simulation.
+            number of agent: The number of agent in the simulation.
             graph_type: The type of graph used in the simulation.
             network_bias: The type of network bias used in the simulation.
     '''
-    num_agents = int(file_path.name.split('.')[0])
+    num_agents = 25 # fixed for this paper
 
-    graph_type = "scale_free_network"
+    if "scale_free" in dir_path.name:
+        graph_type = "scale_free"
+    else:
+        graph_type = dir_path.name
 
     network_bias = "unbiased"
-    if ("incorrect" in str(file_path)) and ("hub" in str(file_path)):
-        network_bias = "incorrect_bias_hub"
-    elif ("incorrect" in str(file_path)) and ("edge" in str(file_path)):
-        network_bias = "incorrect_bias_edge"
-    elif ("correct" in str(file_path)) and ("hub" in str(file_path)):
-        network_bias = "correct_bias_hub"
-    elif ("correct" in str(file_path)) and ("edge" in str(file_path)):
-        network_bias = "correct_bias_edge"
+    if 'scale_free' in dir_path.name:
+        network_bias = "unbiased"
+        if "incorrect" in dir_path.name and "hub" in dir_path.name:
+            network_bias = "incorrect_hub"
+        elif "incorrect" in dir_path.name and "edge" in dir_path.name:
+            network_bias = "incorrect_edge"
+        elif "correct" in dir_path.name and "hub" in dir_path.name:
+            network_bias = "correct_hub"
+        elif "correct" in dir_path.name and "edge" in dir_path.name:
+            network_bias = "correct_edge"
 
     return num_agents, graph_type, network_bias
 
@@ -186,117 +181,118 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
     Returns:
         pd.DataFrame: The original DataFrame with an added column for the proportion of correct neighbors from the previous round.
     """
-    # Filter for unbiased responses
-    df = parsed_agent_response.copy()
-    df['agent_id_str'] = df['agent_id'].astype(str)  # Convert agent_id to string once
+    df_final = pd.DataFrame(columns = ["network_number", "round", "question_number", "repeat", 
+                                        "agent_id", "correct_prev_round", "correct_this_round", 
+                                        "prop_correct_neighbors"])
+    if graph_type == "fully_disconnected":
+        df_final.to_csv(Path(final_res_path) / 'proportion_neighbors_correct_previous_round.csv', index=False)
+        return df_final
 
-    new_data = []
-
-    # Iterate over each unique combination of network number, round, question number, and repeat
-    for (network_num, round_, question_number, repeat), df_group in df.groupby(['network_number', 'round', 'question_number', 'repeat']):
-        graphml_path = Path(f'data/{graph_type}/{network_num}.graphml')
+    df = parsed_agent_response.copy().drop(['parsed_response','correct_response'], axis=1)
+    for network_num in df['network_number'].unique():
+        # We load the graph and build a pandas table containing all the edges
+        graphml_path = Path(f'input/{graph_type}/{network_num}.graphml')
         G = nx.read_graphml(graphml_path)
-        
-        # Check if the previous round exists
-        if round_ > 0:
-            # Filter the DataFrame for the previous round
-            df_previous_round = df.query(f"network_number == {network_num} and round == {round_ - 1} and question_number == {question_number} and repeat == {repeat}")
 
-            # Iterate over each agent in the current group
-            for agent_id_str in df_group['agent_id_str'].unique():
-                if agent_id_str in G:
-                    neighbors = list(G.neighbors(agent_id_str))
-                    # Filter for neighbors' correctness in the previous round
-                    df_neighbors_previous_round = df_previous_round[df_previous_round['agent_id_str'].isin(neighbors)]
-                    proportion_correct_previous_round = df_neighbors_previous_round['correct'].mean() if not df_neighbors_previous_round.empty else None
-                else:
-                    proportion_correct_previous_round = None  # If agent_id not in graph, set proportion as None
-                
-                new_data.append({
-                    'network_number': network_num,
-                    'agent_id': int(agent_id_str),  # Convert back to int if necessary
-                    'round': round_,
-                    'question_number': question_number,
-                    'repeat': repeat,
-                    'proportion_neighbors_correct_previous_round': proportion_correct_previous_round
-                })
-    
-    # Convert new data to DataFrame
-    results_df = pd.DataFrame(new_data)
-    # Specify columns to merge on, including new dimensions
-    merge_cols = ['network_number', 'agent_id', 'round', 'question_number', 'repeat']
-    # Merge the new data back into the original DataFrame
-    df_final = pd.merge(parsed_agent_response, results_df, on=merge_cols, how='left')
+        network_df = df.query(f"network_number == {network_num}")
+        edge_list = []
+        for edge in G.edges:
+            edge_list.append([int(edge[0]), int(edge[1])])
+            edge_list.append([int(edge[1]), int(edge[0])])
+        df_edges = pd.DataFrame(columns = ["agent_id", "neihgbour_id"], data = edge_list).drop_duplicates()
 
-    # Save csv
-    df_final.to_csv(final_res_path / 'proportion_neighbors_correct_previous_round.csv', index=False)
+        # Iterate over each unique combination of network number, question number, and repeat
+        for round in network_df['round'].unique():
+            if round == 0: # First round is skipped because it does not have a previous round
+                continue
+            # Cartesian product of each agent with all its neighbors for the given round
+            partial_res_df = network_df.query(f"round == {round} & bias == 'unbiased'").merge(df_edges, on="agent_id")
+            
+            # We select the previous round responses and merge them with the cartesian product dataframe to have each
+            # node's neihgbor response
+            neihgbours_responses = network_df.query(f"round == {round-1}").rename(columns={"agent_id": "neihgbour_id",
+                                                                                           "correct": "correct_neihbour"})
+            partial_res_df = partial_res_df.merge(neihgbours_responses, 
+                                                  on = ["neihgbour_id", "question_number", "repeat"])
+            
+            # We aggregate the result by doing the mean over all the neihbours responses
+            partial_res_df = partial_res_df.groupby(["agent_id", 
+                                                    "question_number", 
+                                                    "repeat",
+                                                    "correct"]).agg(prop_correct_neighbors=("correct_neihbour", "mean")).reset_index()
+            
+            # Add missing data
+            partial_res_df = partial_res_df.rename(columns={"correct": "correct_this_round"})
+            partial_res_df['network_number'] = network_num
+            partial_res_df['round'] = round
 
+            # We use merge to add 1 last boolean columns: correct_previous_round
+            previous_round = network_df.query(f"round == {round-1}")[["agent_id", "question_number", 
+                                                                    "repeat", "correct"]]
+            previous_round = previous_round.rename(columns={"correct": "correct_prev_round"})
+            partial_res_df = partial_res_df.merge(previous_round, on=["agent_id", "question_number","repeat"])
+
+            # Concatenation to final result
+            if df_final.empty:
+                df_final = partial_res_df
+            else:
+                df_final = pd.concat([df_final, partial_res_df])
+
+    df_final.to_csv(Path(final_res_path) / 'proportion_neighbors_correct_previous_round.csv', index=False)
     return df_final
 
-def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, network_bias: str) -> pd.DataFrame :
+def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, network_responses_df: pd.DataFrame):
     '''
-        Returns consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
+    Returns consensus measure and Simpson consensus for each question in the parsed_agent_response DataFrame
+    for questions which the system answered correctly and incorrectly.
 
-        Args:
-            parsed_agent_response: The parsed agent response dataframe.
+    Args:
+        parsed_agent_response: The parsed agent response dataframe.
+        network_responses_df: The dataframe containing the system's response information.
 
-        Returns:
-            final_consensus: The consensus measure and Simpson consensus for each question in the parsed_agent_response dataFrame.
+    Returns:
+        correct_consensus: The consensus measure and Simpson consensus for each question answered correctly.
+        incorrect_consensus: The consensus measure and Simpson consensus for each question answered incorrectly.
     '''
-
-    biased = True if 'unbiased' not in network_bias else False
-
-    # Read the CSV file
+    # Filter unbiased responses
     df = parsed_agent_response.query("bias == 'unbiased'")
 
-    num_agent = 23 if biased else 25
-    last_round = df['round'].unique().max()
+    last_round = network_responses_df['round'].max()
 
-    # We select only the correct responses in the last round and remove unecessary columns 
-    correct_prop = df.query(f'round == {last_round}')#[['network_number', 'question_number', 'correct']]
+    # Filter network_responses_df to include only correctly and incorrectly answered questions
+    correct_questions = network_responses_df.query(f"round == {last_round} & correct == True")[['network_number', 'question_number', 'repeat']]
+    incorrect_questions = network_responses_df.query(f"round == {last_round} & correct == False")[['network_number', 'question_number', 'repeat']]
 
-    # We count the proportion of agent with a correct answers for each question
-    correct_prop = correct_prop.groupby(['network_number', 'question_number'])['correct'].mean().reset_index()
-    correct_prop = correct_prop.rename(columns={'correct': 'correct_prop'})
-    
-    # Simpson consensus computation. This accuracy is computed as the probability that two answers
-    # randomly selected are the same.
-    simpson = df.query(f"round == {last_round}").groupby(['network_number', 
-                                                            'question_number', 
-                                                            'parsed_response',
-                                                            'repeat']).size().reset_index(name = 'count')
-    simpson['simpson'] = simpson['count'].apply(lambda count : count/num_agent).apply(lambda p : p*p)
-    simpson = simpson.groupby(['network_number', 'question_number', 'repeat']).sum().reset_index()
+    # Merge with the filtered parsed_agent_response to keep only the correct and incorrect questions
+    correct_df = df.merge(correct_questions, on=['network_number', 'question_number', 'repeat'], how='inner')
+    incorrect_df = df.merge(incorrect_questions, on=['network_number', 'question_number', 'repeat'], how='inner')
 
-    # average on 'repeat'
-    simpson = simpson.groupby(['network_number', 'question_number'])['simpson'].mean().reset_index()
-    simpson = simpson[['network_number', 'question_number','simpson']]
+    # Function to compute consensus
+    def compute_consensus(dataframe):
+        # Calculate correct proportion for each question
+        correct_prop = dataframe.groupby(['network_number', 'question_number', 'repeat'])['correct'].mean().reset_index()
+        correct_prop = correct_prop.rename(columns={'correct': 'correct_prop'})
 
-    # Finally, we join tables
-    final_consensus = pd.merge(correct_prop, simpson, on = ['network_number', 'question_number'])
+        # Calculate Simpson index
+        counts = dataframe.groupby(['network_number', 'question_number', 'repeat', 'parsed_response']).size().reset_index(name='count')
+        total_counts = counts.groupby(['network_number', 'question_number', 'repeat'])['count'].sum().reset_index(name='total')
+        counts = counts.merge(total_counts, on=['network_number', 'question_number', 'repeat'])
+        counts['proportion'] = counts['count'] / counts['total']
+        counts['simpson'] = counts['proportion'] ** 2
 
-    return final_consensus
+        simpson = counts.groupby(['network_number', 'question_number', 'repeat'])['simpson'].sum().reset_index()
 
-def filter_wrong_responses(agent_parsed_responses: pd.DataFrame,
-                           network_responses: pd.DataFrame) -> pd.DataFrame:
-    '''
-        Filter agent parsed rersponses to keep only the lines on which the response of the network is wrong.
+        final_consensus = pd.merge(correct_prop, simpson, on=['network_number', 'question_number', 'repeat'])
 
-        Args:
-            agent_parsed_responses: The parsed agent response dataframe.
-            network_responses: The network response dataframe.
+        return final_consensus
 
-        Returns:
-            res: The filtered agent parsed responses dataframe.
-    '''
-    last_round = network_responses['round'].unique().max()
-    wrong_responses = network_responses.query(f'correct == False & round == {last_round}')
+    # Compute consensus for correct and incorrect questions
+    correct_consensus = compute_consensus(correct_df)
+    incorrect_consensus = compute_consensus(incorrect_df)
 
-    # We create new columns to concatenates the keys which will be used in isin()
-    wrong_responses.loc[:, 'key'] = wrong_responses['network_number'].astype(str) + '_' + wrong_responses['question_number'].astype(str) + '_' + wrong_responses['repeat'].astype(str)
-    agent_parsed_responses.loc[:, 'key'] = agent_parsed_responses['network_number'].apply(str) + '_' + agent_parsed_responses['question_number'].apply(str) + '_' + agent_parsed_responses['repeat'].apply(str)
+    correct_consensus['network_correct'] = "true"
+    incorrect_consensus['network_correct'] = "false"
 
-    res = agent_parsed_responses[agent_parsed_responses['key'].isin(wrong_responses['key'])]
+    return pd.concat([correct_consensus, incorrect_consensus])
 
-    return res.drop(columns='key')
 
