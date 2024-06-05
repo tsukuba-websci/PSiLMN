@@ -509,30 +509,62 @@ def consensus_incorrect_vs_bias(input_file_path: str, output_dir: str, human_rea
         
 def neighbours_accuracy(input_file_path: str, output_file_path: str, graph_colours: dict[str, str]) -> None:
     csv_files = glob.glob(input_file_path, recursive=True)
+    csv_files = [file for file in csv_files if "disconnected" not in file]
+
+    if not csv_files:
+        return
+
     df = pd.concat([pd.read_csv(csv_file) for csv_file in csv_files], ignore_index=True)
+    df = df[['correct_this_round', 'correct_prev_round', 'prop_correct_neighbors']]
+    df.to_csv(Path(output_file_path) / 'neighbours_accuracy.csv', index=False)
 
-    # df['correct'] = df['correct'].astype('category')
+    # Convert relevant columns to numeric and handle NaN values
+    df['correct_this_round'] = pd.to_numeric(df['correct_this_round'], errors='coerce')
+    df['correct_prev_round'] = df['correct_prev_round'].astype(bool)
+    df['prop_correct_neighbors'] = pd.to_numeric(df['prop_correct_neighbors'], errors='coerce')
+    df = df.dropna()
 
-    df = df[['correct_this_round', 'correct_prev_round','prop_correct_neighbors']]
-    df.to_csv(Path(output_file_path) / 'neighbours_accuracy.csv', index = False)
-    df = df.groupby(["prop_correct_neighbors", "correct_prev_round" ]).mean().reset_index()
-
-    plt.figure(figsize=(12, 8))
+    # Create the lmplot with Seaborn
     custom_palette = {True: graph_colours['scale_free_correct_hub'], False: graph_colours['scale_free_incorrect_hub']}
-    sns.lmplot(data=df, x='prop_correct_neighbors', y="correct_this_round",
-                hue='correct_prev_round', palette=custom_palette)
-    # sns.kdeplot(data=df, x='prop_correct_neighbors', y="correct_this_round",
-    #              stat="probability",
-    #             hue='correct_prev_round', fill=False, common_norm=False, 
-    #             palette=custom_palette, alpha=1, linewidth=3, clip=(0, 1))
-    plt.title('Agent Correctness by Proportion of Neighbours Correct in Prev. Round',  fontsize=24)
-    plt.xlabel('Proportion of Neighbours Correct', fontsize=20)
-    plt.ylabel('Probability of being correct', fontsize=20)
-    plt.yticks(fontsize=16)
+    lm = sns.lmplot(
+        data=df,
+        x='prop_correct_neighbors',
+        y='correct_this_round',
+        hue='correct_prev_round',
+        palette=custom_palette,
+        height=8,
+        aspect=1.5,
+        legend=False,
+        x_estimator=np.mean,
+        scatter_kws={'alpha': 0.3, 'edgecolor': 'black', 'linewidth': 0.5}  # Set the opacity of error bars
+    )
+
+    for ax in lm.axes.ravel():
+        ax.spines['right'].set_visible(True)
+        ax.spines['top'].set_visible(True)
+
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
+
+    # Add the title using plt
+    plt.title('Agent Influence', fontsize=24)
+
+    # Add axis labels using plt
+    plt.xlabel(r'Proportion of Neighbours Correct in Round $n-1$', fontsize=20)
+    plt.ylabel(r'Probability of Individual Correct in Round $n$', fontsize=20)
+
+    # Customize ticks
     plt.xticks(fontsize=16)
-    plt.legend(title='Answer previous round', labels=['Correct', 'Incorrect'], fontsize=16, title_fontsize=16, loc='upper left')
-    plt.tight_layout()
-    plt.savefig(f"{output_file_path}neighbours_accuracy.png", dpi=300)
+    plt.yticks(fontsize=16)
+
+    # Create custom legend
+    correct_patch = Patch(color=graph_colours['scale_free_correct_hub'], label='Correct', alpha=1)
+    incorrect_patch = Patch(color=graph_colours['scale_free_incorrect_hub'], label='Incorrect', alpha=1)
+    plt.legend(handles=[correct_patch, incorrect_patch], title=r'Individuals Answer Round $n-1$', fontsize=16, title_fontsize=16, loc='upper left')
+    plt.tight_layout(rect=[0, 0, 1, 1])
+
+    # Save plot
+    plt.savefig(Path(output_file_path) / 'neighbours_accuracy.png', dpi=300)
 
 def created_gifs(parsed_agent_response: pd.DataFrame,
                  graphml_path: Path,
