@@ -69,6 +69,8 @@ def main():
     visu.neighbours_accuracy(f"{RESULTS_PATH}**/proportion_neighbors_correct_previous_round.csv", 
                             RESULTS_PATH, GRAPH_COLORS)
 
+    analyse.calculate_cost_per_round(f"{RESULTS_PATH}/cost_per_round.csv")
+
     pass
 
 if __name__ == '__main__':

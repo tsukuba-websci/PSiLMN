@@ -8,6 +8,8 @@ from typing import Tuple
 import lib.parse as parse
 import lib.visualize as visu
 import networkx as nx
+import os
+import csv
 
 pd.options.mode.chained_assignment = None
 
@@ -239,7 +241,64 @@ def calculate_proportion_neighbours_correct(parsed_agent_response: pd.DataFrame,
                 df_final = pd.concat([df_final, partial_res_df])
 
     df_final.to_csv(Path(final_res_path) / 'proportion_neighbors_correct_previous_round.csv', index=False)
+
     return df_final
+
+def calculate_average_message_count(graphml_folder):
+    message_counts = []
+    
+    # Loop through all files in the given folder
+    for filename in os.listdir(graphml_folder):
+        if filename.endswith('.graphml'):
+            # Load the graph from the file
+            graph = nx.read_graphml(os.path.join(graphml_folder, filename))
+            # Get the number of edges in the graph
+            message_count = graph.number_of_edges()
+            message_counts.append((message_count * 2) + 25)
+    
+    # Calculate the average number of edges
+    if message_counts:
+        average_messages = sum(message_counts) / len(message_counts)
+    else:
+        average_messages = 0
+
+    return average_messages
+
+def calculate_cost_per_round(output_csv='output.csv'):
+    '''
+    Calculate the average number of inputs and tokens per round for each network type.
+
+    Args:
+        output_csv: The path to the output CSV file.
+
+    Returns:
+        None
+    '''
+
+    network_types = ['fully_connected', 'fully_disconnected', 'random', 'scale_free']
+    results = []
+
+    for network_type in network_types:
+        graph_files = list(Path(f'input/{network_type}').glob('*.graphml'))
+        
+        if not graph_files:
+            print(f"No GraphML files found for network type: {network_type}")
+            continue
+        
+        average_messages = (calculate_average_message_count(f'input/{network_type}'))
+
+        agent_max_tokens = 200
+        network_max_tokens = average_messages * agent_max_tokens
+
+        results.append((network_type, average_messages, network_max_tokens))
+
+    # Write the results to a CSV file
+    with open(output_csv, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['network', 'inputs_per_round', 'tokens_per_round'])
+        writer.writerows(results)
+
+    pass
 
 def calculate_consensus_per_question(parsed_agent_response: pd.DataFrame, network_responses_df: pd.DataFrame):
     '''
