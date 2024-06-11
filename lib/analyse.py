@@ -51,7 +51,7 @@ def analyse_simu(agent_response: Path,
 
     # Consensus
     consensus_df = calculate_consensus_per_question(agent_parsed_resp, network_responses_df)
-    visu.consensus_repartition(consensus_df, results_path, graph_colors)
+    visu.consensus_repartition(consensus_df, results_path, graph_colors, graph_names)
 
     # Opinion changes
     opinion_changes = find_evolutions(agent_parsed_resp)

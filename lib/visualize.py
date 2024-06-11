@@ -71,7 +71,7 @@ def accuracy_repartition(network_responses : pd.DataFrame,
 
     return
 
-def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, graph_colors: dict[str, str]) -> None:
+def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, graph_colors: dict[str, str], graph_names: dict[str,str]) -> None:
     ''' Save the combined consensus repartition in res_dir_path location. The program creates separate .png images and .csv files. 
     res_dir_path should lead to a directory, not to a file.
     '''
@@ -92,7 +92,7 @@ def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, graph_
     sns.histplot(consensus_incorrect, x="correct_prop", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.6, label='Incorrect')
     plt.title("Proportion of Agents Correct per Question", fontsize=24)
     plt.xlabel("Proportion of Agents Correct", fontsize=20)
-    plt.ylabel("Relative Frequency", fontsize=20)
+    plt.ylabel("Relative Frequency", fontsize=28)
     plt.xticks(fontsize=16)
     plt.yticks(fontsize=16)
     plt.xlim(0, 1)
@@ -105,12 +105,13 @@ def consensus_repartition(consensus_df: pd.DataFrame, res_dir_path: Path, graph_
     plt.figure(figsize=(12, 8))
     sns.histplot(consensus_correct, x="simpson", color=graph_colors['scale_free_correct_hub'], stat='probability', alpha=0.5, label='Correct')
     sns.histplot(consensus_incorrect, x="simpson", color=graph_colors['scale_free_incorrect_hub'], stat='probability', alpha=0.5, label='Incorrect')
-    plt.title("Consensus within the Collective", fontsize=28)
+    plt.title(graph_names[network_type].replace("\n", " "), fontsize=28)
     plt.xlabel("Simpson Index $\\lambda$", fontsize=28)
     plt.ylabel("Relative Frequency", fontsize=28)
     plt.xticks(fontsize=24)
     plt.yticks(fontsize=24)
     plt.xlim(0.2, 1)
+    plt.ylim(0, 0.35)
     plt.legend(fontsize=24)
     plt.tight_layout()
     plt.savefig(res_dir_path / f'simpson_{network_type}.png', dpi=300)
@@ -137,7 +138,7 @@ def opinion_changes(df_opinion_evol: pd.DataFrame, bias: str, res_dir_path: Path
     df_opinion_evol = df_opinion_evol.rename(columns={'evolution': 'Answer Change'})
 
     # Correctly format the display names
-    title = graph_names.get(bias, bias).replace('\n', ' ').replace('Scale-Free', '')
+    title = graph_names.get(network_type, network_type).replace('\n', ' ').replace('Scale-Free', '')
 
     # Define the custom palette and the order of the hues
     custom_palette = {
@@ -353,7 +354,7 @@ def accuracy_vs_round(agent_responses_path: str, output_dir: str, human_readable
         combined_csv_path = Path(output_dir) / 'accuracy_and_round.csv'
         results_df.to_csv(combined_csv_path, index=False)
 
-        plt.figure(figsize=(16, 9))  # 16:9 aspect ratio
+        plt.figure(figsize=(12, 8))
         sns.set_style("white")
 
         def format_label(network):
@@ -443,7 +444,7 @@ def correct_prop_vs_network(input_file_path: str, output_dir: str, human_readabl
 
     plt.xlabel('Network Type', fontsize=20)
     plt.ylabel("Percentage of Agents that Answered Correctly (%)", fontsize=20)
-    plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], fontsize=12)
+    plt.xticks(range(len(results_df['network'])), [human_readable_labels.get(str(network), str(network)) for network in results_df['network']], fontsize=16)
     plt.yticks(fontsize=16)
     plt.ylim(0, 80)
     plt.title("Percentage of Agents that Answered Correctly", fontsize=24)
