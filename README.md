@@ -1,4 +1,4 @@
-# 🧬 Problem Solving in Language Model Networks
+# 🕸️ Problem Solving in Language Model Networks
 
 This repository contains the code for the paper "Problem Solving in Language Model Networks" which was accepted at the [2024 Conference on Artificial Life](https://2024.alife.org/).
 
