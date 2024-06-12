@@ -1,44 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <title>Problem Solving in Language Model Networks</title>
-        <link rel="stylesheet" type="text/css" href="styles.css">
-    </head>
-    <body>
-        <div class="container">
-            <h1 style="margin-top: 50px;"><span class="highlighted-title">Problem Solving in Language Model Networks</span></h1>
-            <div class="author-info">
-                <p class="author">Ciaran Regan<sup>1</sup>, Alexandre Gournail<sup>2</sup>, Mizuki Oka<sup>1</sup></p>
-                <p class="affiliation">
-                    <sup>1</sup>Grad. School of Science and Technology, University of Tsukuba, Tsukuba, Ibaraki, Japan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sup>2</sup>Ensimag, Grenoble INP, Grenoble, France
-                </p>&nbsp;
-            </div>
-            <div class="images-container">
-                <img src="./figs/tsukuka.png" alt="First Image" class="image">
-                <img src="./figs/ensimag.png" alt="Second Image" class="image">
-            </div>  
-
-            <h3 class="abstract-heading">Abstract</h3>
-            <p>We investigate multi-agent approaches to enhance the reasoning and question-answering capabilities of Large Language Models (LLMs). Our study extends the concept of multi-agent debate to more complex network structures, specifically scale-free networks. We measure the question-answering performance, the strength of the consensus formed, and the impact of bias within the network. Results indicate that correctly biased hub nodes significantly improve overall system performance, suggesting that strategically placing knowledgeable agents can boost collective intelligence.</p>
-            
-            <h3 class="abstract-heading">Introduction</h3>
-            <p>Large Language Models (LLMs) have shown remarkable abilities in various tasks, yet they still struggle with hallucinations and incorrect answers. To address these issues, multi-agent approaches inspired by human problem-solving have been introduced. Techniques like ReAct and Reflexion enable LLMs to engage in iterative reasoning and self-reflection, improving their decision-making. However, these methods primarily use single agents. Our work explores multi-agent systems on scale-free networks, aiming to understand how agents influence each other and how network topology affects performance. We extend the concept of multi-agent debate to these complex networks to analyze their dynamics and effectiveness.</p>
-            
-            <h3 class="abstract-heading">Methods</h3>
-            <p>We represent LLM agents as nodes in a network, with edges indicating communication channels. In multi-agent debate, agents first solve problems individually, then reconsider their answers based on their neighbors' responses and their previous answers. This process repeats for several rounds, culminating in a majority vote to determine the collective answer. We introduce bias by providing certain agents with correct or incorrect answers and study the influence of these biased agents based on their network position (hubs or edges). The impact of these biases on the overall performance and the consensus within the network is analyzed.</p>
-            
-            <h3 class="abstract-heading">Experimental Setup</h3>
-            <p>We conducted experiments using three scale-free networks, each with 25 GPT-3.5-Turbo powered agents. These agents engaged in four rounds of debate to answer 100 high-school mathematics questions from the MMLU dataset. The experiment was repeated three times to ensure statistical significance. To study the effect of bias, we introduced correct and incorrect answers into either the hub or edge nodes and compared the performance with unbiased networks. The goal was to observe how biased nodes influenced the spread of information and the overall accuracy of the system.</p>
-            
-            <h3 class="abstract-heading">Results</h3>
-            <p>The introduction of bias into hub nodes had a significant impact on performance. Correctly biased hubs increased the system's accuracy from 64% to 86%, while incorrectly biased hubs reduced it to 42%. This shows that agents are strongly influenced by their neighbors' responses. Networks with biased edge nodes showed little change in performance, indicating that influence is more significant when the biased nodes are centrally located. Our analysis revealed that agents tend to form a consensus when the system answers correctly, but responses are split when the system is incorrect. The presence of bias reduced consensus in incorrect answers, increasing the variability in responses.</p>
-            
-            <h3 class="abstract-heading">Conclusion</h3>
-            <p>Our study demonstrates that the strategic placement of knowledgeable agents in central network positions can enhance the overall performance of multi-agent systems. This finding suggests that future multi-agent systems should leverage network topology to optimize collective intelligence. By placing larger, more capable models at network hubs and smaller models at the periphery, it is possible to improve performance without a significant increase in computational cost. Future research should explore different network structures and larger systems to generalize these findings further.</p>
-            
-            <h3 class="abstract-heading">Discussion and Limitations</h3>
-            <p>This study has important implications for designing future multi-agent systems. However, it is limited by the number of agents, questions, and rounds used due to computational constraints. Future work should explore a broader range of network structures, including random and small-world networks, and increase the number of agents to better understand the dynamics and performance of these systems. Despite these limitations, our findings provide valuable insights into how bias and network topology influence collective problem-solving and consensus formation in multi-agent systems.</p>
+<head>
+    <meta charset="UTF-8">
+    <title>Problem-Solving in Language Model Networks</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1 style="margin-top: 50px;"><span class="highlighted-title">Problem-Solving in Language Model Networks</span></h1>
+        <div class="author-info">
+            <p class="author">Ciaran Regan<sup>1</sup>, Alexandre Gournail<sup>2</sup>, Mizuki Oka<sup>1</sup></p>
+            <p class="affiliation">
+                <sup>1</sup>University of Tsukuba, Japan&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<sup>2</sup>Grenoble INP - Ensimag, UGA, France
+            </p>&nbsp;
         </div>
-    </body>
+        <div class="images-container">
+            <img src="./figs/tsukuka.png" alt="First Image" class="image-logo">
+            <img src="./figs/ensimag.png" alt="Second Image" class="image-logo">
+        </div>  
+
+        <h3 class="abstract-heading">Abstract</h3>
+        <p>To improve the reasoning and question-answering capabilities of Large Language Models (LLMs), several multi-agent approaches have been introduced. While these methods enhance performance, the application of collective intelligence-based approaches to complex network structures and the dynamics of agent interactions remain underexplored. This work extends the concept of multi-agent debate to more general network topologies, measuring the question-answering accuracy, influence, consensus, and the effects of bias on the collective. The results show that random networks perform similarly to fully connected networks despite using significantly fewer tokens. Furthermore, a strong consensus among agents correlates with correct answers, whereas divided responses typically indicate incorrect answers. Analyzing the influence of the agents reveals a balance between self-reflection and interconnectedness; self-reflection aids when local interactions are incorrect, and local interactions aid when the agent itself is incorrect. Additionally, bias plays a strong role in system performance with correctly biased hub nodes boosting performance. These insights suggest that using random networks or scale-free networks with knowledgeable agents placed in central positions can enhance the overall performance of multi-agent systems.</p>
+        
+        <div class="images-container">
+            <figure>
+                <img src="./figs/architecture.png" alt="Scale-Free Networks" class="image-large">
+                <figcaption>Overview of multi-agent debate on complex networks.</figcaption>
+            </figure>
+        </div>
+
+        <h3 class="abstract-heading">Introduction</h3>
+        <p>LLMs have demonstrated impressive performance on various tasks but still struggle with hallucinations and incorrect answers. Multi-agent approaches, inspired by human problem-solving, have been introduced to address these issues. Techniques like ReAct and Reflexion enable LLMs to engage in iterative reasoning and self-reflection. This work explores multi-agent systems on scale-free networks to understand agent influence and network topology effects on performance, extending the concept of multi-agent debate to these complex networks.</p>
+        
+        <h3 class="abstract-heading">Methods</h3>
+        <p>LLM agents are represented as nodes in a network with edges indicating communication channels. In multi-agent debate, agents solve problems individually, then reconsider answers based on neighbors' responses and previous answers. This process repeats for several rounds, culminating in a majority vote for the collective answer. We introduce bias by providing certain agents with correct or incorrect answers and analyze their influence based on network position (hubs or edges).</p>
+        
+        <div class="images-container">
+            <figure>
+                <img src="./figs/sf_networks.png" alt="Scale-Free Networks" class="image">
+                <figcaption>Figure 1: Scale-Free Networks.</figcaption>
+            </figure>
+        </div>
+        
+        <div class="images-container">
+            <figure>
+                <img src="./figs/random_networks.png" alt="Random Networks" class="image">
+                <figcaption>Figure 2: Random Networks.</figcaption>
+            </figure>
+        </div>
+
+        <h3 class="abstract-heading">Experimental Setup</h3>
+        <p>Experiments were conducted using three scale-free networks, each with 25 GPT-3.5-Turbo agents, engaging in four rounds of debate to answer 100 high-school mathematics questions from the MMLU dataset. The experiment was repeated three times for statistical significance. Bias was introduced into hub or edge nodes, comparing performance with unbiased networks to observe how biased nodes influence information spread and overall accuracy.</p>
+        
+        <h3 class="abstract-heading">Results</h3>
+        
+        <h4 class="abstract-heading">Network Structure and QA Performance</h4>
+        <p>Comparing the QA performance between different types of networks, it is evident that structure plays a role in the accuracy, as shown in Table 1. In particular, random networks achieve similar performance to fully connected networks, while using 250 times fewer input tokens per round of debate. Scale-free networks, which use a similar amount of input tokens per round to random networks, exhibit worse performance than random networks, suggesting the random network topology is superior for problem-solving tasks. In contrast, fully disconnected networks demonstrate the lowest performance, highlighting the importance of collaborative problem-solving.</p>
+        <div class="table-container">
+            <table>
+                <caption>Table 1: Accuracy and number of tokens used per round of debate for various types of (unbiased) networks.</caption>
+                <tr>
+                    <th>Network</th>
+                    <th>Tokens per Round</th>
+                    <th>Accuracy</th>
+                </tr>
+                <tr>
+                    <td>Fully Connected</td>
+                    <td>125000</td>
+                    <td>67.7 &plusmn; 1.1%</td>
+                </tr>
+                <tr>
+                    <td>Fully Disconnected</td>
+                    <td>5000</td>
+                    <td>63.9 &plusmn; 0.4%</td>
+                </tr>
+                <tr>
+                    <td>Random</td>
+                    <td>28600</td>
+                    <td>68.2 &plusmn; 0.5%</td>
+                </tr>
+                <tr>
+                    <td>Scale-Free</td>
+                    <td>21800</td>
+                    <td>64.8 &plusmn; 1.0%</td>
+                </tr>
+            </table>
+        </div>
+        <div class="images-container">
+            <figure>
+                <img src="./figs/accuracy_vs_round_structure.png" alt="Accuracy per Round" class="image">
+                <figcaption>Figure 3: Accuracy per round of debate for different types of networks. Initially, the accuracy of all systems is the same, but as rounds progress, fully connected networks show the steepest increase in accuracy.</figcaption>
+            </figure>
+        </div>
+
+        <h4 class="abstract-heading">Bias and QA Performance</h4>
+        <p>Comparing the performance between biased and unbiased systems, it is found that bias also plays a role in QA accuracy, shown in Table 2. Networks with correctly (incorrectly) biased nodes at their hubs perform significantly better (worse) than their unbiased counterpart. In particular, networks with correctly biased hub nodes performed twice as well when compared to networks with incorrectly biased hubs, with accuracies of 88.1 &plusmn; 0.5% and 43.8 &plusmn; 1.5% respectively. Although bias is expected to impact the performance, the significant decrease in accuracy for incorrectly biased networks highlights that it only takes a few biased and well-connected agents, two in this case, to impair the results significantly. Moreover, the stronger comparative performance of the unbiased system demonstrates that although agents may be capable of solving problems correctly, they are easily influenced by incorrect agents. In the case where bias is inserted on the edge of the network on the other hand, it is found that there is little effect on the QA performance.</p>
+        <div class="table-container">
+            <table>
+                <caption>Table 2: Accuracy for biased scale-free networks.</caption>
+                <tr>
+                    <th>Network</th>
+                    <th>Accuracy</th>
+                </tr>
+                <tr>
+                    <td>Unbiased</td>
+                    <td>64.8 &plusmn; 1.0%</td>
+                </tr>
+                <tr>
+                    <td>Correctly Biased (Hub)</td>
+                    <td>88.1 &plusmn; 0.5%</td>
+                </tr>
+                <tr>
+                    <td>Incorrectly Biased (Hub)</td>
+                    <td>43.8 &plusmn; 1.5%</td>
+                </tr>
+                <tr>
+                    <td>Correctly Biased (Edge)</td>
+                    <td>65.7 &plusmn; 1.1%</td>
+                </tr>
+                <tr>
+                    <td>Incorrectly Biased (Edge)</td>
+                    <td>64.9 &plusmn; 1.3%</td>
+                </tr>
+            </table>
+        </div>
+        <div class="images-container">
+            <figure>
+                <img src="./figs/accuracy_vs_round_bias.png" alt="Accuracy per Round with Bias" class="image">
+                <figcaption>Figure 4: Accuracy per round of debate for scale-free networks with different types of biases. Networks with correctly biased hubs show a significant increase in accuracy after the first round.</figcaption>
+            </figure>
+        </div>
+
+        <h4 class="abstract-heading">Influence</h4>
+        <p>To understand how an agent may be influenced, the probability of the agent being correct in round n, given its previous response and the response of its neighbours in round n-1 is shown in Figure 5. The figure shows that as the number of correct neighbours increases, so too does the probability of the agent being correct. Furthermore, the tendency for green points to lie above red points highlights the positive impact of self-reflection; regardless of the neighbour's response, an agent is more likely to answer correctly if it was correct in the previous round. These findings highlight the importance of both individuality and collective thinking in multi-agent systems. That is, collaborative problem-solving improves the overall performance of the collective, while self-reflection acts to improve performance when local interactions are misguided.</p>
+        <div class="images-container">
+            <figure>
+                <img src="./figs/neighbours_accuracy.png" alt="Agent Influence" class="image">
+                <figcaption>Figure 5: Agent influence; the likelihood of an agent being correct based on both its own answer and the answer of its neighbors in the previous round. Agents are more likely to be correct if the majority of their neighbors are correct.</figcaption>
+            </figure>
+        </div>
+
+        <h4 class="abstract-heading">Dynamics</h4>
+        <p>To further understand the dynamics of these systems, the way in which agents change their answers between rounds is shown in Figure 6. In the case of fully connected, scale-free, and random networks, the number of agents selecting and remaining on the correct answer increases with each round of debate. For fully disconnected networks, on the other hand, the number of agents remaining correct or incorrect is near-constant, with agents continuing to switch between the correct and incorrect answers. Considering bias, networks correctly biased at their hubs exhibit a large number of agents switching from incorrect to correct answers after the first round, in agreement with Figure 4. These agents with correct answers tend to keep the correct response throughout the remaining rounds of debate. Networks incorrectly biased at their hubs, on the other hand, have an increasing number of agents switching from correct to incorrect after round two. This is a significant result, as it highlights the fact that agents may have the correct answer, but will be convinced to switch due to the influence of their biased neighbours.</p>
+        <div class="grid-container">
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/opinion_changes_fully_connected.png" alt="Fully Connected Dynamics" class="image">
+                    <figcaption>Figure 6a: Dynamics in Fully Connected Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/opinion_changes_fully_disconnected.png" alt="Fully Disconnected Dynamics" class="image">
+                    <figcaption>Figure 6b: Dynamics in Fully Disconnected Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/opinion_changes_scale_free_unbiased.png" alt="Scale-Free Unbiased Dynamics" class="image">
+                    <figcaption>Figure 6c: Dynamics in Scale-Free Unbiased Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/opinion_changes_random.png" alt="Random Networks Dynamics" class="image">
+                    <figcaption>Figure 6d: Dynamics in Random Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/opinion_changes_scale_free_correct_hub.png" alt="Correctly Biased Hub Dynamics" class="image">
+                    <figcaption>Figure 6e: Dynamics in Correctly Biased Hub Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/opinion_changes_scale_free_incorrect_hub.png" alt="Incorrectly Biased Hub Dynamics" class="image">
+                    <figcaption>Figure 6f: Dynamics in Incorrectly Biased Hub Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/opinion_changes_scale_free_correct_edge.png" alt="Correctly Biased Edge Dynamics" class="image">
+                    <figcaption>Figure 6g: Dynamics in Correctly Biased Edge Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/opinion_changes_scale_free_incorrect_edge.png" alt="Incorrectly Biased Edge Dynamics" class="image">
+                    <figcaption>Figure 6h: Dynamics in Incorrectly Biased Edge Networks.</figcaption>
+                </figure>
+            </div>
+        </div>
+
+        <h4 class="abstract-heading">Consensus</h4>
+        <p>While the accuracy gave us an insight into the average QA performance of the system, it provides little information on how the answers are distributed inside the network during any given round and whether or not the agents agree. In fact, the network can be correct with less than half of its agents giving the correct answer, due to majority voting. This section explores how and under which conditions a consensus is formed. The percentage of agents in the network that answered the question correctly in the final round is shown in Figure 7. Although this metric highlights the relationship between the consensus towards the correct answer and the overall QA performance, which captures the total number of questions answered correctly, little information is provided on how the answers are distributed.</p>
+        <div class="images-container">
+            <figure>
+                <img src="./figs/correct_prop_vs_network_type.png" alt="Correct Proportion vs Network Type" class="image">
+                <figcaption>Figure 7: The percentage of agents that answered correctly in the final round.</figcaption>
+            </figure>
+        </div>
+        <p>To gain insight into the distribution of answers, the Simpson index is used to estimate the level of consensus within the collective. The Simpson index, which is used to quantify diversity, measures the probability that any two randomly selected agents give the same answer in the final round of the experiment. High values for fully connected networks, followed by those for random and scale-free networks, indicate a relationship between network connectivity and the agreement among agents. The results show that a high degree of consensus among agents correlates with correct answers, indicating greater certainty. Conversely, when consensus is lower, the system is more likely to be incorrect.</p>
+        <div class="grid-container">
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/simpson_fully_connected.png" alt="Simpson Fully Connected" class="image">
+                    <figcaption>Figure 8a: Simpson Index for Fully Connected Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/simpson_fully_disconnected.png" alt="Simpson Fully Disconnected" class="image">
+                    <figcaption>Figure 8b: Simpson Index for Fully Disconnected Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/simpson_scale_free_unbiased.png" alt="Simpson Scale-Free Unbiased" class="image">
+                    <figcaption>Figure 8c: Simpson Index for Scale-Free Unbiased Networks.</figcaption>
+                </figure>
+            </div>
+            <div class="grid-item">
+                <figure>
+                    <img src="./figs/simpson_random.png" alt="Simpson Random Networks" class="image">
+                    <figcaption>Figure 8d: Simpson Index for Random Networks.</figcaption>
+                </figure>
+            </div>
+        </div>
+        
+        <h3 class="abstract-heading">Conclusion</h3>
+        <p>Strategic placement of knowledgeable agents in central network positions can enhance multi-agent systems' performance. Future systems should leverage network topology to optimize collective intelligence by placing larger, more capable models at network hubs and smaller models at the periphery, improving performance without significant computational cost. Further research should explore different network structures and larger systems to generalize these findings.</p>
+        
+        <h3 class="abstract-heading">Discussion and Limitations</h3>
+        <p>This study has important implications for designing future multi-agent systems but is limited by the number of agents, questions, and rounds due to computational constraints. Future work should explore a broader range of network structures, including random and small-world networks, and increase the number of agents to better understand these systems' dynamics and performance. Despite limitations, findings provide valuable insights into how bias and network topology influence collective problem-solving and consensus formation in multi-agent systems.</p>
+    </div>
+</body>
 </html>

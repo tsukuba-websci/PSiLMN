@@ -1,22 +1,26 @@
 body {
     font-family: 'Arial', sans-serif;
 }
+
 .container {
     width: 80%;
     margin: auto;
 }
+
 .video-container {
     position: relative;
     padding-bottom: 56.25%; /* 16:9 aspect ratio */
     padding-top: 25px;
     height: 0;
 }
+
 .video-caption {
     text-align: center;
     font-size: 0.9em;
     color: #666;
     margin-top: 5px;
 }
+
 .video-container iframe {
     position: absolute;
     top: 0;
@@ -24,6 +28,7 @@ body {
     width: 100%;
     height: 100%;
 }
+
 .small-heading {
     font-size: 1.4em;
     font-weight: bold;
@@ -31,69 +36,95 @@ body {
     margin-top: 30px;
     text-align: left;
 }
+
 .author-info {
     text-align: center;
     margin-top: 5px;
 }
+
 .author {
     font-size: 1.2em;
     color: #363636;
 }
+
 .affiliation, .corresponding-author {
     font-size: 0.9em;
 }
+
 sup {
     font-size: 0.75em;
 }
+
 .images-container {
-    text-align: center; /* 画像を中央揃えにする */
-    margin-top: 20px; /* 上のコンテンツとの間隔を開ける */
+    text-align: center;
+    margin-top: 20px;
     display: flex;
     justify-content: center;
     align-items: center;
+    flex-wrap: wrap;
+}
+
+.image-logo {
+    width: 150px;
+    height: auto;
+    margin: 0 30px;
+    display: inline-block;
+}
+.image-large {
+    width: 800px;
+    height: auto;
+    margin: 0 30px;
+    display: inline-block;
 }
 .image {
-    width: 150px; /* 画像の幅を適宜設定 */
-    height: auto; /* 高さを自動調整してアスペクト比を維持 */
-    margin: 0 30px; /* 画像の間に余白を設定 */
-    display: inline-block; /* 画像をインラインブロック要素として表示 */
+    width: 400px;
+    height: auto;
+    margin: 0 30px;
+    display: inline-block;
 }
+
 .results-section {
-    font-size: 1.0em; /* Adjust size as needed */
+    font-size: 1.0em;
     text-align: left;
-    margin-top: 40px; /* Space above the Abstract heading */
-    margin-bottom: 10px; /* Space below the Abstract heading */
+    margin-top: 40px;
+    margin-bottom: 10px;
 }
+
 .figure img {
     max-width: 100%;
     height: auto;
 }
+
 .caption {
     text-align: center;
     font-size: 0.9em;
     color: #666;
 }
+
 .highlighted-title {
-    font-size: 1.2em; /* Adjust size as needed */
+    font-size: 1.2em;
     font-weight: bold;
 }
 
 h1 {
     text-align: center;
-    font-weight: normal; /* Ensure the rest of the title is not bold */
+    font-weight: normal;
 }
+
 .abstract-heading {
-    font-size: 1.0em; /* Adjust size as needed */
+    font-size: 1.0em;
     text-align: left;
-    margin-top: 40px; /* Space above the Abstract heading */
-    margin-bottom: 10px; /* Space below the Abstract heading */
+    margin-top: 40px;
+    margin-bottom: 10px;
 }
-.method-section{
-    font-size: 1.0em; /* Adjust size as needed */
+
+.method-section {
+    font-size: 1.0em;
     text-align: left;
-    margin-top: 40px; /* Space above the Abstract heading */
-    margin-bottom: 10px; /* Space below the Abstract heading */
+    margin-top: 40px;
+    margin-bottom: 10px;
 }
+
 .collapsible {
     background-color: #f9f9f9;
     color: #444;
@@ -105,29 +136,33 @@ h1 {
     outline: none;
     font-size: 15px;
     transition: 0.4s;
-    }
+}
 
 .active, .collapsible:hover {
     background-color: #555;
     color: white;
 }
+
 .tcolorbox {
     border: 1px solid rgb(27, 27, 27);
     background-color: #cdcdcd;
     padding: 10px;
     margin: 10px 0;
-    border-radius: 10px; /* Adjust this value as needed */
+    border-radius: 10px;
 }
+
 .collapsible::after {
-        content: '\002B'; /* Unicode character for "+" */
-        font-size: 13px;
-        color: #777;
-        float: right;
-        margin-left: 5px;
+    content: '\002B';
+    font-size: 13px;
+    color: #777;
+    float: right;
+    margin-left: 5px;
 }
+
 .active::after {
-        content: "\2212"; /* Unicode character for "-" */
+    content: "\2212";
 }
+
 .content {
     padding: 0 18px;
     display: none;
@@ -135,26 +170,87 @@ h1 {
     background-color: #f1f1f1;
     transition: max-height 0.2s ease-out;
 }
+
 .figure {
     display: flex;
     justify-content: center;
+    flex-direction: column;
+    align-items: center;
     margin-bottom: 20px;
     margin-top: 20px;
 }
+
 .subfigure {
     margin: 0 10px;
     text-align: center;
 }
+
 .subfigure img {
     width: 100%;
     height: auto;
 }
+
 @media (max-width: 768px) {
     .figure {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .subfigure {
+        width: 80%;
+    }
+}
+
+.grid-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.grid-item {
+    display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
+    width: 100%;
 }
-    .subfigure {
-    width: 80%;
-    }
+
+.grid-item img {
+    max-width: 100%;
+    height: auto;
+}
+
+.grid-item figcaption {
+    text-align: center;
+    margin-top: 5px;
+}
+
+.table-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+table {
+    border-collapse: collapse;
+    margin: 10px 0;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+caption {
+    caption-side: top;
+    font-weight: bold;
+    margin-bottom: 10px;
 }

@@ -10,3 +10,4 @@ temp.py
 *.png
 !/experiment/input/**/*.png
 *.pyc
+!/docs/**/*.png
