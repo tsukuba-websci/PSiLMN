@@ -13,12 +13,12 @@ class Network:
     """Network of Agents with Memory"""
 
     def __init__(self, path: str, model: str = "mistral") -> None:
-        if "gpt-3.5-turbo" in model:
+        if "mistral" in model:
             encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
             token_buffer = 1000
             max_tokens = 16385 - token_buffer # max tokens for gpt-3.5-turbo
 
-        elif "mistral" in model:
+        elif "gpt-3.5-turbo" in model:
             from transformers import AutoTokenizer
             encoding = AutoTokenizer.from_pretrained("mistralai/Mistral-7B-v0.1")
             token_buffer = 1000
