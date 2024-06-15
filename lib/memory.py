@@ -23,7 +23,7 @@ def relevance_score_fn(score: float) -> float:
 class Memory:
     """Memory for the generative agent."""
 
-    def __init__(self, model: str = "mistral") -> None:
+    def __init__(self, model: str = "gpt-3.5-turbo") -> None:
 
         if "mistral" in model:
             embedding_fn = OllamaEmbeddings(model="mistral:instruct")
