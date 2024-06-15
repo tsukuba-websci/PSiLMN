@@ -12,7 +12,7 @@ from lib.agent import Agent
 class Network:
     """Network of Agents with Memory"""
 
-    def __init__(self, path: str, model: str = "mistral") -> None:
+    def __init__(self, path: str, model: str = "gpt-3.5-turbo") -> None:
         if "gpt-3.5-turbo" in model:
             encoding = tiktoken.encoding_for_model("gpt-3.5-turbo")
             token_buffer = 1000

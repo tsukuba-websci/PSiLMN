@@ -12,7 +12,7 @@ import random
 class Agent:
     """Generative Agent"""
 
-    def __init__(self, id: str, bias: str = "none", model: str = "mistral") -> None:
+    def __init__(self, id: str, bias: str = "none", model: str = "gpt-3.5-turbo") -> None:
 
         if "mistral" in model:
             llm = Ollama(model="mistral")
